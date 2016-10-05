@@ -1,5 +1,3 @@
-// yaks.s
-
 YKContextSaver: ; Saves the current context of the task that was running.
     pushf
     

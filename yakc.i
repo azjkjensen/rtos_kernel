@@ -81,7 +81,7 @@ int currentTaskCount;
 int YKRunTask;
 
 int YKContextSP;
-int YKRestoreSP
+int YKRestoreSP;
 TaskPtr YKCurrentRunningTask;
 
 
@@ -178,8 +178,8 @@ void YKRun() {
         return;
     }
     YKRunTask = 1;
-    YKCurrentRunningTask = readyRoot;
     YKRestoreSP = *(int*)(readyRoot->stackPtr);
+    YKCurrentRunningTask = readyRoot;
     YKCtxSwCount++;
 
 }

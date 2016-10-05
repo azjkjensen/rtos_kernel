@@ -31,7 +31,7 @@ int currentTaskCount;
 int YKRunTask;
 
 int YKContextSP;
-int YKRestoreSP
+int YKRestoreSP;
 TaskPtr YKCurrentRunningTask;
                                 
 // Stack frame for the idle stack.
