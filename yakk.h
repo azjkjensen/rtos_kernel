@@ -4,6 +4,7 @@
 
 extern int YKCtxSwCount;
 extern int YKIdleCount;
+extern int tickCount;
 
 void YKinitialize();
 void YKEnterMutex();
@@ -12,5 +13,5 @@ void YKinitialize();
 void YKIdleTask();
 void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority);
 void YKRun();
-void YKScheduler();
-void YKDispatcher();
+void YKScheduler(unsigned contextSave);
+void YKDispatcher(unsigned contextSave);

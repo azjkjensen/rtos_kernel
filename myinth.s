@@ -3,21 +3,21 @@
 	ALIGN	2
 	jmp	main	; Jump to program start
 	ALIGN	2
+tickCount:
+	DW	0
 L_myinth_1:
 	DW	0
 L_myinth_2:
-	DW	0
-L_myinth_3:
 	DB	"RESETTING",0
 	ALIGN	2
 resetHandler:
 	; >>>>> Line:	8
 	; >>>>> void resetHandler(){ 
-	jmp	L_myinth_4
-L_myinth_5:
+	jmp	L_myinth_3
+L_myinth_4:
 	; >>>>> Line:	9
 	; >>>>> printString("RESETTING"); 
-	mov	ax, L_myinth_3
+	mov	ax, L_myinth_2
 	push	ax
 	call	printString
 	add	sp, 2
@@ -30,27 +30,27 @@ L_myinth_5:
 	mov	sp, bp
 	pop	bp
 	ret
-L_myinth_4:
+L_myinth_3:
 	push	bp
 	mov	bp, sp
-	jmp	L_myinth_5
-L_myinth_7:
+	jmp	L_myinth_4
+L_myinth_6:
 	DB	0xA,"Tick ",0
 	ALIGN	2
 tickHandler:
 	; >>>>> Line:	13
 	; >>>>> void tickHandler(){ 
-	jmp	L_myinth_8
-L_myinth_9:
+	jmp	L_myinth_7
+L_myinth_8:
 	; >>>>> Line:	14
 	; >>>>> printString("\nTick "); 
-	mov	ax, L_myinth_7
+	mov	ax, L_myinth_6
 	push	ax
 	call	printString
 	add	sp, 2
 	; >>>>> Line:	15
 	; >>>>> printInt(tickCount); 
-	push	word [L_myinth_1]
+	push	word [tickCount]
 	call	printInt
 	add	sp, 2
 	; >>>>> Line:	16
@@ -58,82 +58,82 @@ L_myinth_9:
 	call	printNewLine
 	; >>>>> Line:	17
 	; >>>>> tickCount++; 
-	inc	word [L_myinth_1]
+	inc	word [tickCount]
 	mov	sp, bp
 	pop	bp
 	ret
-L_myinth_8:
+L_myinth_7:
 	push	bp
 	mov	bp, sp
-	jmp	L_myinth_9
+	jmp	L_myinth_8
 	ALIGN	2
 loopLikeABoss:
 	; >>>>> Line:	20
 	; >>>>> void loopLikeABoss(){ 
-	jmp	L_myinth_11
-L_myinth_12:
+	jmp	L_myinth_10
+L_myinth_11:
 	; >>>>> Line:	22
 	; >>>>> for(; i < 5001; i++){ 
 	mov	word [bp-2], 0
 	; >>>>> Line:	22
 	; >>>>> for(; i < 5001; i++){ 
-	jmp	L_myinth_14
-L_myinth_13:
+	jmp	L_myinth_13
+L_myinth_12:
 	; >>>>> Line:	23
 	; >>>>> someLocalVariable++; 
-	inc	word [L_myinth_2]
-L_myinth_16:
-	inc	word [bp-2]
-L_myinth_14:
-	cmp	word [bp-2], 5001
-	jl	L_myinth_13
+	inc	word [L_myinth_1]
 L_myinth_15:
+	inc	word [bp-2]
+L_myinth_13:
+	cmp	word [bp-2], 5001
+	jl	L_myinth_12
+L_myinth_14:
 	mov	sp, bp
 	pop	bp
 	ret
-L_myinth_11:
+L_myinth_10:
 	push	bp
 	mov	bp, sp
 	push	cx
-	jmp	L_myinth_12
-L_myinth_21:
-	DB	") IGNORED",0
+	jmp	L_myinth_11
 L_myinth_20:
-	DB	0xA,"KEYPRESS (",0
+	DB	") IGNORED",0
 L_myinth_19:
-	DB	0xA,"DELAY COMPLETE",0xA,0
+	DB	0xA,"KEYPRESS (",0
 L_myinth_18:
+	DB	0xA,"DELAY COMPLETE",0xA,0
+L_myinth_17:
 	DB	0xA,"DELAY KEY PRESSED",0xA,0
 	ALIGN	2
 keypressHandler:
 	; >>>>> Line:	27
 	; >>>>> void keypressHandler(){ 
-	jmp	L_myinth_22
-L_myinth_23:
+	jmp	L_myinth_21
+L_myinth_22:
 	; >>>>> Line:	28
 	; >>>>> if((char)KeyBuffer == 'd'){ 
 	cmp	byte [KeyBuffer], 100
-	jne	L_myinth_24
+	jne	L_myinth_23
 	; >>>>> Line:	29
 	; >>>>> printString("\nDELAY KEY PRESSED\n"); 
-	mov	ax, L_myinth_18
+	mov	ax, L_myinth_17
 	push	ax
 	call	printString
 	add	sp, 2
 	; >>>>> Line:	30
-	; >>>>> loopLikeABos 
+	; >>>>> loopLikeABoss(); 
 	call	loopLikeABoss
 	; >>>>> Line:	31
-	; >>>>> printString("\nDELAY COMPLETE\n"); 
-	mov	ax, L_myinth_19
+	; >>>>>  
+	mov	ax, L_myinth_18
 	push	ax
 	call	printString
 	add	sp, 2
-	jmp	L_myinth_25
-L_myinth_24:
+	jmp	L_myinth_24
+L_myinth_23:
 	; >>>>> Line:	34
 	; >>>>> printString("\nKEYPRESS ("); 
-	mov	ax, L_myinth_20
+	mov	ax, L_myinth_19
 	push	ax
 	call	printString
 	add	sp, 2
@@ -144,18 +144,18 @@ L_myinth_24:
 	add	sp, 2
 	; >>>>> Line:	36
 	; >>>>> printString(") IGNORED"); 
-	mov	ax, L_myinth_21
+	mov	ax, L_myinth_20
 	push	ax
 	call	printString
 	add	sp, 2
 	; >>>>> Line:	37
 	; >>>>> printNewLine(); 
 	call	printNewLine
-L_myinth_25:
+L_myinth_24:
 	mov	sp, bp
 	pop	bp
 	ret
-L_myinth_22:
+L_myinth_21:
 	push	bp
 	mov	bp, sp
-	jmp	L_myinth_23
+	jmp	L_myinth_22

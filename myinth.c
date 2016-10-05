@@ -2,7 +2,7 @@
 
 extern int KeyBuffer;
 
-static int tickCount = 0;
+int tickCount = 0;
 static int someLocalVariable = 0;
 
 void resetHandler(){

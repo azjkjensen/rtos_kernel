@@ -1,11 +1,12 @@
 // yakc.c
 
-#include yakk.h
-#include yaku.h
+#include "clib.h"
+#include "yakk.h"
+#include "yaku.h"
 
+#define IDLE_TASK_PRIORITY 255
 
-
-typedef struct Task* taskPtr;
+typedef struct Task* TaskPtr;
 
 typedef struct Task
 {               /* the TCB struct definition */
@@ -13,18 +14,18 @@ typedef struct Task
     int state;          /* current state */
     int priority;       /* current priority */
     int delay;          /* #ticks yet to wait */
-    taskPtr next;        /* forward ptr for dbl linked list */
-    taskPtr prev;        /* backward ptr for dbl linked list */
-}  ykTasks[MAX_NUM_TASKS+1];
+    TaskPtr next;        /* forward ptr for dbl linked list */
+    TaskPtr prev;        /* backward ptr for dbl linked list */
+} Task;
 
-taskPtr YKRdyList;       /* a list of TCBs of all ready tasks
-                   in order of decreasing priority */ 
-taskPtr YKSuspList;      /* tasks delayed or suspended */
-taskPtr YKAvailTCBList;      /* a list of available TCBs */
-Task    YKTCBArray[MAXTASKS+1];  /* array to allocate all needed TCBs
-                                   (extra one is for the idle task) */
-                           
+Task ykTasks[MAX_NUM_TASKS+1];
+
+TaskPtr YKSuspList;      /* tasks delayed or suspended */
+TaskPtr YKAvailTCBList;      /* a list of available TCBs */
+        
 int currentTaskCount;
+int YKRunTask;
+int YKContextSP;
                                 
 // Stack frame for the idle stack.
 int YKIdleTaskStack[STACK_SIZE];
@@ -34,25 +35,78 @@ void YKIdleTask(void){
     while(1);
 }
 
-Task* readyRoot; // The most-ready task in our ready tasks linked-list
+TaskPtr readyRoot; // The most-ready task in our ready tasks linked-list
+TaskPtr readyTail; // The lowest priority task in our ready task linked-list.
 
-void YKinitialize(){
+void YKInitialize(){
     YKEnterMutex(); // Enable interrupts, save context.
+
     currentTaskCount = 0;
-    YKNewTask(&YKIdleTask,&YKIdleTaskStack,1000);    // Create a new task with the given task on the task stack with lowest priority
+    YKRunTask = 0;
+    YKCtxSwCount = 0;
+    YKIdleCount = 0;
+    YKContextSP = NULL;
+
+    // Create a new task with the given task on the task stack with lowest priority
+    YKNewTask(&YKIdleTask,&YKIdleTaskStack, IDLE_TASK_PRIORITY);
+}
+
+/* Adds a task to the current ready task linked-list. */
+void YKAddReadyTask(TaskPtr readyTask) {
+    if(readyTask == NULL){
+        return;
+        
+    // Insert the new readyTask into the linked-list depending on priority.
+    }else if(readyRoot == NULL){
+        readyTask->next = NULL;
+        readyTask->prev = NULL;
+        readyRoot = readyTask;
+        readyTail = readyTask;
+        return;
+    } else{
+        TaskPtr currentNode = readyRoot;
+        while(currentNode != NULL) {
+            if (readyTask->priority > currentNode->priority) {
+                if(currentNode->next == NULL){
+                    currentNode->next = readyTask;
+                    readyTask->prev = currentNode;
+                    readyTask->next = NULL;
+                    readyTail = readyTask;
+                    return;
+                }else if(readyTask->priority < (currentNode->next)->priority) { 
+                    // Insert the new task between readyTask and readyTask->next 
+                    TaskPtr temp = currentNode->next;
+                    readyTask->next = temp;
+                    currentNode->next = readyTask;
+                    temp->prev = readyTask;
+                    readyTask->prev = currentNode;
+                    return;
+                    
+                }
+                // Keep going
+                currentNode= currentNode->next; 
+            } else{ // Insert at the root
+                    readyTask->next = currentNode;
+                    readyTask->prev = NULL;
+                    currentNode->prev = readyTask;
+                    readyRoot = readyTask;
+                    return;
+            }
+        }
+    }
 }
 
 void YKNewTask(void (*Task)(void), void* taskStack, unsigned char priority){
     // Append a new task struct after the lastcurrentTaskCount element of the task array.
-    struct Task* temp;
+    TaskPtr temp;
     YKEnterMutex();
     
     temp = &ykTasks[currentTaskCount];
     
-    temp.stackPtr = taskStack;
+    temp->stackPtr = taskStack;
     //temp.state = ;
-    temp.priority = priority;
-    temp.delay = 0;
+    temp->priority = priority;
+    temp->delay = 0;
     //temp.next = 
     //temp.prev
     currentTaskCount++;
@@ -60,24 +114,17 @@ void YKNewTask(void (*Task)(void), void* taskStack, unsigned char priority){
     
 }
 
-/* Adds a task to the current ready task linked-list. */
-void YKAddReadyTask(Task readyTask) {
-    if(!readyRoot){
-        readyRoot = &readyTask;
-        return;
-    } else{
-        // Insert the new readyTask into the linked-list depending on priority.
-    }
-}
-
 void YKRun() {
-
+    if(readyRoot == NULL){
+        printString("readyRoot is null");
+        return; // Error, no ready tasks
+    }
+    YKRunTask = 1;
+    YKContextSP = *(int*)(readyRoot->stackPtr);
+    YKCtxSwCount++;
+    
 }
 
-void YKScheduler(){
-
-}
-
-void YKDispatcher(){
+void YKScheduler(unsigned contextSave){
 
 }
