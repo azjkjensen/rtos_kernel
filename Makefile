@@ -4,7 +4,7 @@
 lab4b.bin: lab4bfinal.s
 	nasm lab4bfinal.s -o lab4b.bin -l lab4b.lst
 
-lab4bfinal.s: clib.s myisr.s myinth.s yaks.s yakc.s
+lab4bfinal.s: clib.s myisr.s myinth.s yaks.s yakc.s lab4bapp.s
 	cat clib.s myisr.s myinth.s yaks.s yakc.s lab4bapp.s > lab4bfinal.s
 
 myinth.s: myinth.c

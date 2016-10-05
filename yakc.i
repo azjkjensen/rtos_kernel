@@ -73,9 +73,16 @@ Task ykTasks[10 +1];
 TaskPtr YKSuspList;
 TaskPtr YKAvailTCBList;
 
+int YKCtxSwCount;
+int YKIdleCount;
+
 int currentTaskCount;
+
 int YKRunTask;
+
 int YKContextSP;
+int YKRestoreSP
+TaskPtr YKCurrentRunningTask;
 
 
 int YKIdleTaskStack[256];
@@ -93,6 +100,7 @@ void YKInitialize(){
 
     currentTaskCount = 0;
     YKRunTask = 0;
+    YKCurrentRunningTask = 0;
     YKCtxSwCount = 0;
     YKIdleCount = 0;
     YKContextSP = 0;
@@ -170,11 +178,17 @@ void YKRun() {
         return;
     }
     YKRunTask = 1;
-    YKContextSP = *(int*)(readyRoot->stackPtr);
+    YKCurrentRunningTask = readyRoot;
+    YKRestoreSP = *(int*)(readyRoot->stackPtr);
     YKCtxSwCount++;
 
 }
 
 void YKScheduler(unsigned contextSave){
-
+    if (readyRoot != YKCurrentRunningTask) {
+        YKCtxSwCount++;
+        YKContextSP = *(int*)(readyRoot->stackPtr);
+        YKCurrentRunningTask = readyRoot;
+        YKDispatcher(contextSave);
+    }
 }

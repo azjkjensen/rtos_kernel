@@ -23,9 +23,16 @@ Task ykTasks[MAX_NUM_TASKS+1];
 TaskPtr YKSuspList;      /* tasks delayed or suspended */
 TaskPtr YKAvailTCBList;      /* a list of available TCBs */
         
+int YKCtxSwCount;
+int YKIdleCount;
+
 int currentTaskCount;
+
 int YKRunTask;
+
 int YKContextSP;
+int YKRestoreSP
+TaskPtr YKCurrentRunningTask;
                                 
 // Stack frame for the idle stack.
 int YKIdleTaskStack[STACK_SIZE];
@@ -43,6 +50,7 @@ void YKInitialize(){
 
     currentTaskCount = 0;
     YKRunTask = 0;
+    YKCurrentRunningTask = NULL;
     YKCtxSwCount = 0;
     YKIdleCount = 0;
     YKContextSP = NULL;
@@ -120,11 +128,17 @@ void YKRun() {
         return; // Error, no ready tasks
     }
     YKRunTask = 1;
-    YKContextSP = *(int*)(readyRoot->stackPtr);
+    YKRestoreSP = *(int*)(readyRoot->stackPtr);
+    YKCurrentRunningTask = readyRoot;
     YKCtxSwCount++;
     
 }
 
 void YKScheduler(unsigned contextSave){
-
+    if (readyRoot != YKCurrentRunningTask) {
+        YKCtxSwCount++;
+        YKContextSP = *(int*)(readyRoot->stackPtr);
+        YKCurrentRunningTask = readyRoot;
+        YKDispatcher(contextSave); //Dispatch that junk and save context if necessary
+    }
 }
