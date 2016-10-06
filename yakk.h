@@ -14,4 +14,4 @@ void YKIdleTask();
 void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority);
 void YKRun();
 void YKScheduler(unsigned contextSave);
-void YKDispatcher(unsigned contextSave);
+void YKDispatcher(unsigned contextSave, int* taskFnPtr);

@@ -23,26 +23,26 @@ void main(void)
 {
     // YKInitialize();
     
-    printString("Creating task A...\n");
-    // YKNewTask(ATask, (void *)&AStk[ASTACKSIZE], 5);
+    printString("\nCreating task A...\n");
+    YKNewTask(ATask, (void *)&AStk[ASTACKSIZE], 5);
     
-    // printString("Starting kernel...\n");
-    // YKRun();
-    printString("made it!");
+    printString("\nStarting kernel...\n");
+    YKRun();
 }
 
 void ATask(void)
 {
-    printString("Task A started!\n");
+    int test = 1+1;
+    printString("\nTask A started!\n");
 
-    // printString("Creating low priority task B...\n");
-    // YKNewTask(BTask, (void *)&BStk[BSTACKSIZE], 7);
+    printString("\nCreating low priority task B...\n");
+    YKNewTask(BTask, (void *)&BStk[BSTACKSIZE], 7);
 
-    // printString("Creating task C...\n");
-    // YKNewTask(CTask, (void *)&CStk[CSTACKSIZE], 2);
+    printString("Creating task C...\n");
+    YKNewTask(CTask, (void *)&CStk[CSTACKSIZE], 2);
 
-    // printString("Task A is still running! Oh no! Task A was supposed to stop.\n");
-    // exit(0);
+    printString("Task A is still running! Oh no! Task A was supposed to stop.\n");
+    exit(0);
 }
 
 void BTask(void)
@@ -56,18 +56,18 @@ void CTask(void)
     int count;
     unsigned numCtxSwitches;
 
-    // YKEnterMutex();
-    // numCtxSwitches = YKCtxSwCount;
-    // YKExitMutex();
+    YKEnterMutex();
+    numCtxSwitches = YKCtxSwCount;
+    YKExitMutex();
 
-    // printString("Task C started after ");
-    // printUInt(numCtxSwitches);
-    // printString(" context switches!\n");
+    printString("Task C started after ");
+    printUInt(numCtxSwitches);
+    printString(" context switches!\n");
 
-    // while (1)
-    // {
-	// printString("Executing in task C.\n");
-    //     for(count = 0; count < 5000; count++);
-    // }
+    while (1)
+    {
+	printString("Executing in task C.\n");
+        for(count = 0; count < 5000; count++);
+    }
 }
 

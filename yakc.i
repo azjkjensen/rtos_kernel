@@ -49,7 +49,7 @@ void YKIdleTask();
 void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority);
 void YKRun();
 void YKScheduler(unsigned contextSave);
-void YKDispatcher(unsigned contextSave);
+void YKDispatcher(unsigned contextSave, int* taskFnPtr);
 # 5 "yakc.c" 2
 # 1 "yaku.h" 1
 # 6 "yakc.c" 2
@@ -60,8 +60,8 @@ typedef struct Task* TaskPtr;
 
 typedef struct Task
 {
+    int* taskFnPtr;
     void* stackPtr;
-    int state;
     int priority;
     int delay;
     TaskPtr next;
@@ -80,8 +80,8 @@ int currentTaskCount;
 
 int YKRunTask;
 
-int YKContextSP;
-int YKRestoreSP;
+int* YKContextSP;
+int* YKRestoreSP;
 TaskPtr YKCurrentRunningTask;
 
 
@@ -89,7 +89,23 @@ int YKIdleTaskStack[256];
 
 
 void YKIdleTask(void){
-    while(1);
+    while(1){
+        YKIdleCount++;
+    }
+}
+
+void printTask(Task t){
+    if(!t.priority){
+        printString("\nNo task to print\n");
+    }
+    printNewLine();
+    printString("Task Printout:\n");
+    printString("SP: ");
+    printInt(t.stackPtr);
+    printNewLine();
+    printString("Priority: ");
+    printInt(t.priority);
+    printNewLine();
 }
 
 TaskPtr readyRoot;
@@ -104,13 +120,16 @@ void YKInitialize(){
     YKCtxSwCount = 0;
     YKIdleCount = 0;
     YKContextSP = 0;
+    YKRestoreSP = 0;
+    readyRoot = 0;
 
 
-    YKNewTask(&YKIdleTask,&YKIdleTaskStack, 255);
+    YKNewTask(&YKIdleTask,&YKIdleTaskStack[256], 255);
 }
 
 
 void YKAddReadyTask(TaskPtr readyTask) {
+    printString("\nYKAddReadyTask() called\n");
     if(readyTask == 0){
         return;
 
@@ -154,41 +173,73 @@ void YKAddReadyTask(TaskPtr readyTask) {
     }
 }
 
-void YKNewTask(void (*Task)(void), void* taskStack, unsigned char priority){
+void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
 
     TaskPtr temp;
+ int *tempSP;
+    int k;
     YKEnterMutex();
 
     temp = &ykTasks[currentTaskCount];
 
-    temp->stackPtr = taskStack;
-
+    temp->taskFnPtr = (int*)task;
+    temp->stackPtr = (int*)taskStack;
     temp->priority = priority;
     temp->delay = 0;
-
-
+    temp->next = 0;
+    temp->prev = 0;
     currentTaskCount++;
     YKAddReadyTask(temp);
 
+
+
+
+    if(YKRunTask){
+        YKScheduler(1);
+        YKExitMutex();
+    }
 }
 
 void YKRun() {
+    printString("\nYKRun() called\n");
+    printTask(*readyRoot);
+
+    printTask(*YKCurrentRunningTask);
+
     if(readyRoot == 0){
         printString("readyRoot is null");
         return;
     }
+
     YKRunTask = 1;
-    YKRestoreSP = *(int*)(readyRoot->stackPtr);
+    YKRestoreSP = (int*)(readyRoot->stackPtr);
+    printString("\n\nFunction Pointer: ");
+    printInt(readyRoot->taskFnPtr);
+
     YKCurrentRunningTask = readyRoot;
     YKCtxSwCount++;
-
+    YKDispatcher(0, readyRoot->taskFnPtr);
 }
 
 void YKScheduler(unsigned contextSave){
+    printString("SCHEDULER: \n");
+
+
     if (readyRoot != YKCurrentRunningTask) {
         YKCtxSwCount++;
-        YKContextSP = *(int*)(readyRoot->stackPtr);
+        YKContextSP = (int*)(YKCurrentRunningTask->stackPtr);
+        YKRestoreSP = (int*)(readyRoot->stackPtr);
+        printNewLine();
+        printInt(YKContextSP);
+        printNewLine();
+        printInt(YKRestoreSP);
+
         YKCurrentRunningTask = readyRoot;
-        YKDispatcher(contextSave);
+        YKDispatcher(contextSave, readyRoot->taskFnPtr);
     }
+}
+
+void printhelp() {
+    printString("Finished dispatcher");
+
 }

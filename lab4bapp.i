@@ -53,7 +53,7 @@ void YKIdleTask();
 void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority);
 void YKRun();
 void YKScheduler(unsigned contextSave);
-void YKDispatcher(unsigned contextSave);
+void YKDispatcher(unsigned contextSave, int* taskFnPtr);
 # 9 "lab4bapp.c" 2
 
 
@@ -72,18 +72,26 @@ void main(void)
 {
 
 
-    printString("Creating task A...\n");
+    printString("\nCreating task A...\n");
+    YKNewTask(ATask, (void *)&AStk[256], 5);
 
-
-
-
-    printString("made it!");
+    printString("\nStarting kernel...\n");
+    YKRun();
 }
 
 void ATask(void)
 {
-    printString("Task A started!\n");
-# 46 "lab4bapp.c"
+    int test = 1+1;
+    printString("\nTask A started!\n");
+
+    printString("\nCreating low priority task B...\n");
+    YKNewTask(BTask, (void *)&BStk[256], 7);
+
+    printString("Creating task C...\n");
+    YKNewTask(CTask, (void *)&CStk[256], 2);
+
+    printString("Task A is still running! Oh no! Task A was supposed to stop.\n");
+    exit(0);
 }
 
 void BTask(void)
@@ -96,5 +104,18 @@ void CTask(void)
 {
     int count;
     unsigned numCtxSwitches;
-# 72 "lab4bapp.c"
+
+    YKEnterMutex();
+    numCtxSwitches = YKCtxSwCount;
+    YKExitMutex();
+
+    printString("Task C started after ");
+    printUInt(numCtxSwitches);
+    printString(" context switches!\n");
+
+    while (1)
+    {
+ printString("Executing in task C.\n");
+        for(count = 0; count < 5000; count++);
+    }
 }
