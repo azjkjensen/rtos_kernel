@@ -11,7 +11,7 @@ typedef struct Task* TaskPtr;
 typedef struct Task
 {               /* the TCB struct definition */
     int* taskFnPtr;
-    void* stackPtr;     /* pointer to current top of stack */
+    unsigned* stackPtr;     /* pointer to current top of stack */
     int priority;       /* current priority */
     int delay;          /* #ticks yet to wait */
     TaskPtr next;        /* forward ptr for dbl linked list */
@@ -30,8 +30,8 @@ int currentTaskCount;
 
 int YKRunTask;
 
-int* YKContextSP;
-int* YKRestoreSP;
+int YKContextSP;
+int YKRestoreSP;
 TaskPtr YKCurrentRunningTask;
                                 
 // Stack frame for the idle stack.
@@ -47,11 +47,12 @@ void YKIdleTask(void){
 void printTask(Task t){
     if(!t.priority){
         printString("\nNo task to print\n");
+        return;
     }
     printNewLine();
     printString("Task Printout:\n");
     printString("SP: ");
-    printInt(t.stackPtr);
+    printInt((int)t.stackPtr);
     printNewLine();
     printString("Priority: ");
     printInt(t.priority);
@@ -75,11 +76,12 @@ void YKInitialize(){
 
     // Create a new task with the given task on the task stack with lowest priority
     YKNewTask(&YKIdleTask,&YKIdleTaskStack[STACK_SIZE], IDLE_TASK_PRIORITY);
+
 }
 
 /* Adds a task to the current ready task linked-list. */
 void YKAddReadyTask(TaskPtr readyTask) {
-    printString("\nYKAddReadyTask() called\n");
+    // printString("\nYKAddReadyTask() called\n");
     if(readyTask == NULL){
         return;
         
@@ -128,20 +130,33 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
     TaskPtr temp;
 	int *tempSP;
     int k;
-    YKEnterMutex();
     
+    unsigned* newSP = (unsigned*)taskStack - 11;
+    int i = 0;
+    for (i = 0; i < 8; i++) {
+        newSP[i] = 0;
+    }
+    newSP[8] = (unsigned)task;
+    newSP[9] = 0;
+    newSP[10] = 0x0200;
+    
+    temp->stackPtr = newSP-1;
+
+    // YKEnterMutex();
+
+
+
     temp = &ykTasks[currentTaskCount];
     
     temp->taskFnPtr = (int*)task;
-    temp->stackPtr = (int*)taskStack;
     temp->priority = priority;
     temp->delay = 0;
     temp->next = NULL;
     temp->prev = NULL;
     currentTaskCount++;
     YKAddReadyTask(temp);
-    // printString("SP should be: ");
-    // printInt((int*)taskStack);
+    printString("SP should be: ");
+    printInt((int)taskStack);
     // printTask(*temp);
 
     if(YKRunTask){
@@ -151,24 +166,24 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
 }
 
 void YKRun() {
-    printString("\nYKRun() called\n");
-    printTask(*readyRoot);
+    // printString("\nYKRun() called\n");
+    // printTask(*readyRoot);
 
-    printTask(*YKCurrentRunningTask);
+    // printTask(*YKCurrentRunningTask);
 
     if(readyRoot == NULL){
-        printString("readyRoot is null");
+        // printString("readyRoot is null");
         return; // Error, no ready tasks
     }
 
     YKRunTask = 1;
-    YKRestoreSP = (int*)(readyRoot->stackPtr);
+    YKRestoreSP = (int)(readyRoot->stackPtr);
     printString("\n\nFunction Pointer: ");
-    printInt(readyRoot->taskFnPtr);
+    printInt((int)(readyRoot->taskFnPtr));
     // printInt(YKRestoreSP);
     YKCurrentRunningTask = readyRoot;
     YKCtxSwCount++;
-    YKDispatcher(0, readyRoot->taskFnPtr);
+    YKDispatcher(0, (int*)readyRoot->taskFnPtr);
 }
 
 void YKScheduler(unsigned contextSave){
@@ -177,12 +192,12 @@ void YKScheduler(unsigned contextSave){
     // printTask(*YKCurrentRunningTask);
     if (readyRoot != YKCurrentRunningTask) {
         YKCtxSwCount++;
-        YKContextSP = (int*)(YKCurrentRunningTask->stackPtr);
-        YKRestoreSP = (int*)(readyRoot->stackPtr);
-        printNewLine();
-        printInt(YKContextSP);
-        printNewLine();
-        printInt(YKRestoreSP);
+        YKContextSP = (int)(YKCurrentRunningTask->stackPtr);
+        YKRestoreSP = (int)(readyRoot->stackPtr);
+        // printNewLine();
+        // printInt((int)YKContextSP);
+        // printNewLine();
+        // printInt((int)YKRestoreSP);
         // print context and restore, and then check in dispatcher
         YKCurrentRunningTask = readyRoot;
         YKDispatcher(contextSave, readyRoot->taskFnPtr); //Dispatch that junk and save context if necessary

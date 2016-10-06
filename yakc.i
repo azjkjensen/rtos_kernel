@@ -61,7 +61,7 @@ typedef struct Task* TaskPtr;
 typedef struct Task
 {
     int* taskFnPtr;
-    void* stackPtr;
+    unsigned* stackPtr;
     int priority;
     int delay;
     TaskPtr next;
@@ -80,8 +80,8 @@ int currentTaskCount;
 
 int YKRunTask;
 
-int* YKContextSP;
-int* YKRestoreSP;
+int YKContextSP;
+int YKRestoreSP;
 TaskPtr YKCurrentRunningTask;
 
 
@@ -97,11 +97,12 @@ void YKIdleTask(void){
 void printTask(Task t){
     if(!t.priority){
         printString("\nNo task to print\n");
+        return;
     }
     printNewLine();
     printString("Task Printout:\n");
     printString("SP: ");
-    printInt(t.stackPtr);
+    printInt((int)t.stackPtr);
     printNewLine();
     printString("Priority: ");
     printInt(t.priority);
@@ -125,11 +126,12 @@ void YKInitialize(){
 
 
     YKNewTask(&YKIdleTask,&YKIdleTaskStack[256], 255);
+
 }
 
 
 void YKAddReadyTask(TaskPtr readyTask) {
-    printString("\nYKAddReadyTask() called\n");
+
     if(readyTask == 0){
         return;
 
@@ -178,20 +180,33 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
     TaskPtr temp;
  int *tempSP;
     int k;
-    YKEnterMutex();
+
+    unsigned* newSP = (unsigned*)taskStack - 11;
+    int i = 0;
+    for (i = 0; i < 8; i++) {
+        newSP[i] = 0;
+    }
+    newSP[8] = (unsigned)task;
+    newSP[9] = 0;
+    newSP[10] = 0x0200;
+
+    temp->stackPtr = newSP-1;
+
+
+
+
 
     temp = &ykTasks[currentTaskCount];
 
     temp->taskFnPtr = (int*)task;
-    temp->stackPtr = (int*)taskStack;
     temp->priority = priority;
     temp->delay = 0;
     temp->next = 0;
     temp->prev = 0;
     currentTaskCount++;
     YKAddReadyTask(temp);
-
-
+    printString("SP should be: ");
+    printInt((int)taskStack);
 
 
     if(YKRunTask){
@@ -201,24 +216,24 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
 }
 
 void YKRun() {
-    printString("\nYKRun() called\n");
-    printTask(*readyRoot);
 
-    printTask(*YKCurrentRunningTask);
+
+
+
 
     if(readyRoot == 0){
-        printString("readyRoot is null");
+
         return;
     }
 
     YKRunTask = 1;
-    YKRestoreSP = (int*)(readyRoot->stackPtr);
+    YKRestoreSP = (int)(readyRoot->stackPtr);
     printString("\n\nFunction Pointer: ");
-    printInt(readyRoot->taskFnPtr);
+    printInt((int)(readyRoot->taskFnPtr));
 
     YKCurrentRunningTask = readyRoot;
     YKCtxSwCount++;
-    YKDispatcher(0, readyRoot->taskFnPtr);
+    YKDispatcher(0, (int*)readyRoot->taskFnPtr);
 }
 
 void YKScheduler(unsigned contextSave){
@@ -227,12 +242,12 @@ void YKScheduler(unsigned contextSave){
 
     if (readyRoot != YKCurrentRunningTask) {
         YKCtxSwCount++;
-        YKContextSP = (int*)(YKCurrentRunningTask->stackPtr);
-        YKRestoreSP = (int*)(readyRoot->stackPtr);
-        printNewLine();
-        printInt(YKContextSP);
-        printNewLine();
-        printInt(YKRestoreSP);
+        YKContextSP = (int)(YKCurrentRunningTask->stackPtr);
+        YKRestoreSP = (int)(readyRoot->stackPtr);
+
+
+
+
 
         YKCurrentRunningTask = readyRoot;
         YKDispatcher(contextSave, readyRoot->taskFnPtr);
