@@ -44,7 +44,7 @@ YKDispatcher: ; Dispatches the next task, and saves context if necessary.
     mov ax, [bp+4]
     cmp ax, 1
     pop ax
-    
+
     je YKContextSaver ; Conditional jump that looks at the boolean result of cmp
     
     push bx
