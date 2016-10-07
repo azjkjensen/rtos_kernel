@@ -20,4 +20,4 @@ lab4bapp.s: lab4bapp.c yakk.h yaku.h clib.h
 	c86 -g lab4bapp.i lab4bapp.s
 
 clean:
-	rm lab4b.bin lab4b.lst lab4bfinal.s myinth.s yakc.s lab4bapp.s myinth.i 
+	rm lab4b.bin lab4b.lst lab4bfinal.s myinth.s yakc.s lab4bapp.s lab4bapp.i myinth.i 
