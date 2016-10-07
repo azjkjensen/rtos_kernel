@@ -1,5 +1,4 @@
 
-        
 YKEnterMutex:
     cli
     ret
@@ -8,7 +7,8 @@ YKExitMutex:
     sti
     ret
     
-YKContextSaver: ; Saves the current context of the task that was running.
+YKDispatcher: ; Dispatches the next task, and saves context if necessary.
+    
     push cs
     pushf
     
@@ -21,26 +21,11 @@ YKContextSaver: ; Saves the current context of the task that was running.
     push bp
     push es
     push ds
-    mov bx, [YKContextSP]
+
+    mov bx, [saveContextTask]
     mov [bx], sp
-    jmp YKContextRestorer
 
-    
-YKDispatcher: ; Dispatches the next task, and saves context if necessary.
-    
-    ;push bp
-    ;mov bp, sp
-    ;push ax
-    ;mov ax, [bp+4]
-    ;cmp ax, 1
-    ;pop ax
-
-
-    jmp YKContextSaver ; Conditional jump that looks at the boolean result of cmp
-    
-
-YKContextRestorer: ; Helper function that restores context
-    mov bx, [bp+6]
+    mov bx, [taskToRun]
     mov sp, [bx]
 
     pop ds
@@ -53,4 +38,4 @@ YKContextRestorer: ; Helper function that restores context
     pop bx
     pop ax
 
-    iret 
+    iret

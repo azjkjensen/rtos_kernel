@@ -21,21 +21,20 @@ void CTask(void);
 
 void main(void)
 {
-    // YKInitialize();
+    YKInitialize();
     
-    printString("\nCreating task A...\n");
+    printString("Creating task A...\n");
     YKNewTask(ATask, (void *)&AStk[ASTACKSIZE], 5);
     
-    printString("\nStarting kernel...\n");
+    printString("Starting kernel...\n");
     YKRun();
 }
 
 void ATask(void)
 {
-    int test = 1+1;
-    printString("\nTask A started!\n");
+    printString("Task A started!\n");
 
-    printString("\nCreating low priority task B...\n");
+    printString("Creating low priority task B...\n");
     YKNewTask(BTask, (void *)&BStk[BSTACKSIZE], 7);
 
     printString("Creating task C...\n");
@@ -70,4 +69,3 @@ void CTask(void)
         for(count = 0; count < 5000; count++);
     }
 }
-

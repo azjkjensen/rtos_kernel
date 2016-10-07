@@ -38,22 +38,23 @@ void signalEOI(void);
 # 8 "lab4bapp.c" 2
 # 1 "yakk.h" 1
 
+# 1 "yaku.h" 1
+# 3 "yakk.h" 2
 
 
 
 extern int YKCtxSwCount;
 extern int YKIdleCount;
-extern int tickCount;
 
-void YKinitialize();
-void YKEnterMutex();
-void YKExitMutex();
-void YKinitialize();
-void YKIdleTask();
+void YKinitialize(void);
+void YKEnterMutex(void);
+void YKExitMutex(void);
+void YKinitialize(void);
+void YKIdleTask(void);
 void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority);
-void YKRun();
-void YKScheduler(unsigned contextSave);
-void YKDispatcher(unsigned contextSave, int* taskFnPtr);
+void YKRun(void);
+void YKScheduler(void);
+void YKDispatcher(void);
 # 9 "lab4bapp.c" 2
 
 
@@ -70,21 +71,20 @@ void CTask(void);
 
 void main(void)
 {
+    YKInitialize();
 
-
-    printString("\nCreating task A...\n");
+    printString("Creating task A...\n");
     YKNewTask(ATask, (void *)&AStk[256], 5);
 
-    printString("\nStarting kernel...\n");
+    printString("Starting kernel...\n");
     YKRun();
 }
 
 void ATask(void)
 {
-    int test = 1+1;
-    printString("\nTask A started!\n");
+    printString("Task A started!\n");
 
-    printString("\nCreating low priority task B...\n");
+    printString("Creating low priority task B...\n");
     YKNewTask(BTask, (void *)&BStk[256], 7);
 
     printString("Creating task C...\n");

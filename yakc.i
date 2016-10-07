@@ -34,227 +34,138 @@ void signalEOI(void);
 # 4 "yakc.c" 2
 # 1 "yakk.h" 1
 
+# 1 "yaku.h" 1
+# 3 "yakk.h" 2
 
 
 
 extern int YKCtxSwCount;
 extern int YKIdleCount;
-extern int tickCount;
 
-void YKinitialize();
-void YKEnterMutex();
-void YKExitMutex();
-void YKinitialize();
-void YKIdleTask();
+void YKinitialize(void);
+void YKEnterMutex(void);
+void YKExitMutex(void);
+void YKinitialize(void);
+void YKIdleTask(void);
 void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority);
-void YKRun();
-void YKScheduler(unsigned contextSave);
-void YKDispatcher(unsigned contextSave, int* taskFnPtr);
+void YKRun(void);
+void YKScheduler(void);
+void YKDispatcher(void);
 # 5 "yakc.c" 2
-# 1 "yaku.h" 1
-# 6 "yakc.c" 2
-
-
-
-typedef struct Task* TaskPtr;
-
-typedef struct Task
+# 13 "yakc.c"
+struct TCB
 {
-    int* taskFnPtr;
     unsigned* stackPtr;
-    int priority;
+    unsigned char state;
+    unsigned char priority;
+    struct TCB *next;
     int delay;
-    TaskPtr next;
-    TaskPtr prev;
-} Task;
+};
 
-Task ykTasks[10 +1];
+struct TCB YKTCBs[10];
 
-TaskPtr YKSuspList;
-TaskPtr YKAvailTCBList;
+int YKCtxSwCount = 0;
+int YKIdleCount = 0;
+int YKTickNum = 0;
+struct TCB* readyRoot;
+struct TCB* currentTask = 0;
+struct TCB* saveContextTask = 0;
+struct TCB* taskToRun;
+char running = 0;
 
-int YKCtxSwCount;
-int YKIdleCount;
+int TCBi = 0;
 
-int currentTaskCount;
+void YKIdleTask(void);
 
-int YKRunTask;
+int YKIdleTasks[256];
 
-int YKContextSP;
-int YKRestoreSP;
-TaskPtr YKCurrentRunningTask;
+void YKInitialize(){
 
 
-int YKIdleTaskStack[256];
+
+    YKNewTask(&YKIdleTask,(void*)&YKIdleTasks[256], 100);
+
+    saveContextTask = &YKTCBs[0];
+}
 
 
 void YKIdleTask(void){
+
     while(1){
         YKIdleCount++;
     }
 }
 
-void printTask(Task t){
-    if(!t.priority){
-        printString("\nNo task to print\n");
-        return;
+void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
+    unsigned* newStackPointer;
+    int i;
+
+    YKTCBs[TCBi].state = 1;
+    YKTCBs[TCBi].priority = priority;
+    YKTCBs[TCBi].delay = 0;
+
+    newStackPointer = (unsigned*)taskStack - 11;
+
+    for(i = 0; i < 8; i++){
+        newStackPointer[i] = 0;
     }
-    printNewLine();
-    printString("Task Printout:\n");
-    printString("SP: ");
-    printInt((int)t.stackPtr);
-    printNewLine();
-    printString("Priority: ");
-    printInt(t.priority);
-    printNewLine();
-}
 
-TaskPtr readyRoot;
-TaskPtr readyTail;
-
-void YKInitialize(){
-    YKEnterMutex();
-
-    currentTaskCount = 0;
-    YKRunTask = 0;
-    YKCurrentRunningTask = 0;
-    YKCtxSwCount = 0;
-    YKIdleCount = 0;
-    YKContextSP = 0;
-    YKRestoreSP = 0;
-    readyRoot = 0;
+    newStackPointer[8] = (unsigned) task;
+    newStackPointer[9] = 0;
+    newStackPointer[10] = 0x0200;
 
 
-    YKNewTask(&YKIdleTask,&YKIdleTaskStack[256], 255);
+    YKTCBs[TCBi].stackPtr = newStackPointer - 1;
 
-}
+    if(TCBi == 0){
+        readyRoot = &YKTCBs[TCBi];
+        YKTCBs[TCBi].next = 0;
+    }else{
+        if(priority < readyRoot->priority){
+            YKTCBs[TCBi].next = readyRoot;
+            readyRoot = &YKTCBs[TCBi];
+        }else{
+            struct TCB* browser;
+            browser = readyRoot;
 
-
-void YKAddReadyTask(TaskPtr readyTask) {
-
-    if(readyTask == 0){
-        return;
-
-
-    }else if(readyRoot == 0){
-        readyTask->next = 0;
-        readyTask->prev = 0;
-        readyRoot = readyTask;
-        readyTail = readyTask;
-        return;
-    } else{
-        TaskPtr currentNode = readyRoot;
-        while(currentNode != 0) {
-            if (readyTask->priority > currentNode->priority) {
-                if(currentNode->next == 0){
-                    currentNode->next = readyTask;
-                    readyTask->prev = currentNode;
-                    readyTask->next = 0;
-                    readyTail = readyTask;
-                    return;
-                }else if(readyTask->priority < (currentNode->next)->priority) {
-
-                    TaskPtr temp = currentNode->next;
-                    readyTask->next = temp;
-                    currentNode->next = readyTask;
-                    temp->prev = readyTask;
-                    readyTask->prev = currentNode;
-                    return;
-
+            while(browser){
+                if(priority < browser->next->priority){
+                    YKTCBs[TCBi].next = browser->next;
+                    browser->next = &YKTCBs[TCBi];
+                    break;
                 }
-
-                currentNode= currentNode->next;
-            } else{
-                    readyTask->next = currentNode;
-                    readyTask->prev = 0;
-                    currentNode->prev = readyTask;
-                    readyRoot = readyTask;
-                    return;
+                browser = browser->next;
             }
         }
     }
-}
 
-void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
-
-    TaskPtr temp;
- int *tempSP;
-    int k;
-
-    unsigned* newSP = (unsigned*)taskStack - 11;
-    int i = 0;
-    for (i = 0; i < 8; i++) {
-        newSP[i] = 0;
-    }
-    newSP[8] = (unsigned)task;
-    newSP[9] = 0;
-    newSP[10] = 0x0200;
-
-    temp->stackPtr = newSP-1;
-
-
-
-
-
-    temp = &ykTasks[currentTaskCount];
-
-    temp->taskFnPtr = (int*)task;
-    temp->priority = priority;
-    temp->delay = 0;
-    temp->next = 0;
-    temp->prev = 0;
-    currentTaskCount++;
-    YKAddReadyTask(temp);
-    printString("SP should be: ");
-    printInt((int)taskStack);
-
-
-    if(YKRunTask){
-        YKScheduler(1);
-        YKExitMutex();
+    TCBi++;
+    if(running){
+        YKScheduler();
     }
 }
 
 void YKRun() {
 
-
-
-
-
-    if(readyRoot == 0){
-
-        return;
-    }
-
-    YKRunTask = 1;
-    YKRestoreSP = (int)(readyRoot->stackPtr);
-    printString("\n\nFunction Pointer: ");
-    printInt((int)(readyRoot->taskFnPtr));
-
-    YKCurrentRunningTask = readyRoot;
-    YKCtxSwCount++;
-    YKDispatcher(0, (int*)readyRoot->taskFnPtr);
+    running = 1;
+    YKScheduler();
 }
 
-void YKScheduler(unsigned contextSave){
-    printString("SCHEDULER: \n");
+void YKScheduler(){
+    struct TCB* browser;
 
+    browser = readyRoot;
+    while(browser){
+        if(browser->state == 1){
+            taskToRun = browser;
+            break;
+        }
+        browser = browser->next;
+    }
 
-    if (readyRoot != YKCurrentRunningTask) {
+    if(taskToRun != currentTask){
+        currentTask = taskToRun;
         YKCtxSwCount++;
-        YKContextSP = (int)(YKCurrentRunningTask->stackPtr);
-        YKRestoreSP = (int)(readyRoot->stackPtr);
-
-
-
-
-
-        YKCurrentRunningTask = readyRoot;
-        YKDispatcher(contextSave, readyRoot->taskFnPtr);
+        YKDispatcher();
     }
-}
-
-void printhelp() {
-    printString("Finished dispatcher");
-
 }
