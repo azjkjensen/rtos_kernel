@@ -44,4 +44,5 @@ lab4c_app.s: lab4c_app.c yakk.h yaku.h clib.h
 	c86 -g lab4c_app.i lab4c_app.s
 
 clean:
-	rm lab4c.bin lab4c.lst lab4cfinal.s myinth.s yakc.s lab4c_app.s lab4c_app.i myinth.i 
+	rm lab4c.bin lab4c.lst lab4cfinal.s myinth.s yakc.s lab4c_app.s lab4c_app.i myinth.i\
+		yakc.i 
