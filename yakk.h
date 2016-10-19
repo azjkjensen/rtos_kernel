@@ -2,6 +2,7 @@
 #include "yaku.h"
 
 #define NULL 0
+#define BLOCKED_ST 0
 
 extern int YKCtxSwCount;
 extern int YKIdleCount;
@@ -15,3 +16,7 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority);
 void YKRun(void);
 void YKScheduler(void);
 void YKDispatcher(void);
+void YKDelayTask(unsigned count);
+void YKEnterISR(void);
+void YKExitISR(void);
+void YKTickHandler(void);

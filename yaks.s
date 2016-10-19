@@ -7,10 +7,10 @@ YKExitMutex:
     sti
     ret
     
-YKDispatcher: ; Dispatches the next task, and saves context if necessary.
-    
+contextSaver:
+    pushf ; Flags
     push cs
-    pushf
+    push word[bp+2] ; IP
     
     push ax
     push bx
@@ -22,9 +22,22 @@ YKDispatcher: ; Dispatches the next task, and saves context if necessary.
     push es
     push ds
 
-    mov bx, [saveContextTask]
+    mov bx, [saveContext]
     mov [bx], sp
 
+    jmp contextRestorer
+
+YKDispatcher: ; Dispatches the next task, and saves context if necessary.
+    push bp					
+	mov bp, sp
+	push ax
+	mov ax, [bp+4]
+	cmp	ax, 1
+	pop ax
+	je 	contextSaver
+    ;;;;;
+
+contextRestorer:   
     mov bx, [taskToRun]
     mov sp, [bx]
 

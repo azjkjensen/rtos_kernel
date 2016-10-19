@@ -23,6 +23,7 @@ struct TCB YKTCBs[MAX_TASK_NUM];
         
 int YKCtxSwCount = 0; // Global
 int YKIdleCount = 0; // Global
+int YKISRCallDepth = 0; // Global
 int YKTickNum = 0;
 struct TCB* readyRoot;
 struct TCB* currentTask = NULL;
@@ -108,7 +109,7 @@ void YKRun() {
     YKScheduler();
 }
 
-void YKScheduler(){
+void YKScheduler(unsigned char saveContext){
     struct TCB* browser;
     
     browser = readyRoot;
@@ -123,8 +124,38 @@ void YKScheduler(){
     if(taskToRun != currentTask){
         currentTask = taskToRun;
         YKCtxSwCount++;
-        YKDispatcher();
+        YKDispatcher(saveContext);
     }
+}
+
+void YKDelayTask(unsigned count){
+    // If count is zero, do nothing.
+    if(!count){
+        return;
+    }else{
+        // Assign the delay to the running task
+        currentTask->delay = count;
+        currentTask->state = BLOCKED_ST
+    }
+
+}
+
+YKEnterISR(void){
+    // Entering a new ISR
+    YKISRCallDepth++;
+}
+
+YKExitISR(void){
+    YKISRCallDepth--;
+    // If there are no more registers, it is time
+    // to restore context.
+    if(!YKISRCallDepth){
+        YKScheduler();
+    }
+}
+
+YKTickHandler(void){
+
 }
 
 // void printTask(TCB t){
