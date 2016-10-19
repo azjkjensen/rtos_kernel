@@ -12,7 +12,7 @@
 extern int YKCtxSwCount;
 extern int YKIdleCount;
 
-void YKinitialize(void);
+void YKInitialize(void);
 void YKEnterMutex(void);
 void YKExitMutex(void);
 void YKinitialize(void);

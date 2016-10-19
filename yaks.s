@@ -22,7 +22,7 @@ contextSaver:
     push es
     push ds
 
-    mov bx, [saveContext]
+    mov bx, [saveContextTask]
     mov [bx], sp
 
     jmp contextRestorer
@@ -35,7 +35,6 @@ YKDispatcher: ; Dispatches the next task, and saves context if necessary.
 	cmp	ax, 1
 	pop ax
 	je 	contextSaver
-    ;;;;;
 
 contextRestorer:   
     mov bx, [taskToRun]

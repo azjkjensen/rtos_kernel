@@ -60,7 +60,7 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
     unsigned* newStackPointer;
     int i; 
 
-    YKTCBs[TCBi].state = READY_STATE;
+    YKTCBs[TCBi].state = READY_ST;
     YKTCBs[TCBi].priority = priority;
     YKTCBs[TCBi].delay = 0;
 
@@ -101,7 +101,27 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
 
     TCBi++;
     if(running){
-        YKScheduler();
+        YKScheduler(SAVE_CONTEXT);
+    }
+}
+
+void YKScheduler(unsigned char saveContext){
+    struct TCB* browser;
+    
+    browser = readyRoot;
+    while(browser){
+        if(browser->state == READY_ST){
+            taskToRun = browser;
+            break;
+        }
+        browser = browser->next;
+    }
+
+    if(taskToRun != currentTask){
+        saveContextTask = currentTask;
+        currentTask = taskToRun;
+        YKCtxSwCount++;
+        YKDispatcher(saveContext);
     }
 }
 
@@ -111,25 +131,6 @@ void YKRun() {
     YKScheduler(DONT_SAVE_CONTEXT);
 }
 
-void YKScheduler(unsigned char saveContext){
-    struct TCB* browser;
-    
-    browser = readyRoot;
-    while(browser){
-        if(browser->state == READY_STATE){
-            taskToRun = browser;
-            break;
-        }
-        browser = browser->next;
-    }
-
-    if(taskToRun != currentTask){
-        currentTask = taskToRun;
-        YKCtxSwCount++;
-        YKDispatcher(saveContext);
-    }
-}
-
 void YKDelayTask(unsigned count){
     // If count is zero, do nothing.
     if(!count){
@@ -137,19 +138,19 @@ void YKDelayTask(unsigned count){
     }else{
         // Assign the delay to the running task
         currentTask->delay = count;
-        currentTask->state = BLOCKED_ST
+        currentTask->state = BLOCKED_ST;
         // Call the scheduler to dispatch the right task
         YKScheduler(SAVE_CONTEXT);
     }
 
 }
 
-YKEnterISR(void){
+void YKEnterISR(void){
     // Entering a new ISR
     YKISRCallDepth++;
 }
 
-YKExitISR(void){
+void YKExitISR(void){
     YKISRCallDepth--;
     // If there are no more registers, it is time
     // to restore context.
@@ -158,21 +159,25 @@ YKExitISR(void){
     }
 }
 
-YKTickHandler(void){
+void YKTickHandler(void){
     // Decrement delay for any blocked tasks.
     // Make tasks that are done delaying ready.
-    YKTickNum++;
     struct TCB* browser;
+    YKTickNum++;
     
     browser = readyRoot;
     while(browser){
         if(browser->state == BLOCKED_ST){
             browser->delay--;
-            if(!browser->delay){
+            // printString("Delaying task ");
+            // printInt((int)browser->stackPtr);
+            // printNewLine();
+            // printInt(browser->delay);
+            if(!(browser->delay)){
                 browser->state = READY_ST;
             }
-            taskToRun = browser;
-            break;
+            // taskToRun = browser;
+            // break;
         }
         browser = browser->next;
     }

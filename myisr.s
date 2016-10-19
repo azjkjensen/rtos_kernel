@@ -18,11 +18,16 @@ tick:
     push bp
     push es
     push ds
+
+    call YKEnterISR
+
     ;Enable interrupts
     sti
     call tickHandler
     cli
     call signalEOI
+
+    call YKExitISR
 
     pop ds
     pop es

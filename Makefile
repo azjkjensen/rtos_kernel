@@ -25,11 +25,11 @@
 #####################################################################
 # ECEn 425 Lab 4c Makefile
 
-lab4b.bin: lab4bfinal.s
-	nasm lab4bfinal.s -o lab4b.bin -l lab4b.lst
+lab4c.bin: lab4cfinal.s
+	nasm lab4cfinal.s -o lab4c.bin -l lab4c.lst
 
-lab4bfinal.s: clib.s myisr.s myinth.s yaks.s yakc.s lab4c_app.s
-	cat clib.s myisr.s myinth.s yaks.s yakc.s lab4c_app.s > lab4bfinal.s
+lab4cfinal.s: clib.s myisr.s myinth.s yaks.s yakc.s lab4c_app.s
+	cat clib.s myisr.s myinth.s yaks.s yakc.s lab4c_app.s > lab4cfinal.s
 
 myinth.s: myinth.c
 	cpp myinth.c myinth.i
@@ -44,4 +44,4 @@ lab4c_app.s: lab4c_app.c yakk.h yaku.h clib.h
 	c86 -g lab4c_app.i lab4c_app.s
 
 clean:
-	rm lab4b.bin lab4b.lst lab4bfinal.s myinth.s yakc.s lab4c_app.s lab4c_app.i myinth.i 
+	rm lab4c.bin lab4c.lst lab4cfinal.s myinth.s yakc.s lab4c_app.s lab4c_app.i myinth.i 

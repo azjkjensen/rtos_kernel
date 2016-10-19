@@ -3,11 +3,11 @@
 
 extern int KeyBuffer;
 
-int tickCount = 0;
+int tickCount = 1;
 static int someLocalVariable = 0;
 
 void resetHandler(){
-    printString("RESETTING");
+    // printString("RESETTING");
     exit(0);
 }
 

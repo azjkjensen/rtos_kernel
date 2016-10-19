@@ -36,23 +36,29 @@ void signalEOI(void);
 
 # 1 "yaku.h" 1
 # 3 "yakk.h" 2
-
-
-
+# 12 "yakk.h"
 extern int YKCtxSwCount;
 extern int YKIdleCount;
 
-void YKinitialize(void);
+void YKInitialize(void);
 void YKEnterMutex(void);
 void YKExitMutex(void);
 void YKinitialize(void);
 void YKIdleTask(void);
 void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority);
 void YKRun(void);
-void YKScheduler(void);
-void YKDispatcher(void);
+void YKScheduler(unsigned char saveContext);
+void YKDispatcher(unsigned char saveContext);
+void YKDelayTask(unsigned count);
+void YKEnterISR(void);
+void YKExitISR(void);
+void YKTickHandler(void);
 # 5 "yakc.c" 2
-# 13 "yakc.c"
+
+
+
+
+
 struct TCB
 {
     unsigned* stackPtr;
@@ -66,6 +72,7 @@ struct TCB YKTCBs[10];
 
 int YKCtxSwCount = 0;
 int YKIdleCount = 0;
+int YKISRCallDepth = 0;
 int YKTickNum = 0;
 struct TCB* readyRoot;
 struct TCB* currentTask = 0;
@@ -80,19 +87,24 @@ void YKIdleTask(void);
 int YKIdleTasks[256];
 
 void YKInitialize(){
-
+    YKEnterMutex();
 
 
     YKNewTask(&YKIdleTask,(void*)&YKIdleTasks[256], 100);
 
-    saveContextTask = &YKTCBs[0];
+
+
 }
 
 
 void YKIdleTask(void){
 
     while(1){
+
+        YKEnterMutex();
         YKIdleCount++;
+
+        YKExitMutex();
     }
 }
 
@@ -141,17 +153,11 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
 
     TCBi++;
     if(running){
-        YKScheduler();
+        YKScheduler(1);
     }
 }
 
-void YKRun() {
-
-    running = 1;
-    YKScheduler();
-}
-
-void YKScheduler(){
+void YKScheduler(unsigned char saveContext){
     struct TCB* browser;
 
     browser = readyRoot;
@@ -164,8 +170,67 @@ void YKScheduler(){
     }
 
     if(taskToRun != currentTask){
+        saveContextTask = currentTask;
         currentTask = taskToRun;
         YKCtxSwCount++;
-        YKDispatcher();
+        YKDispatcher(saveContext);
+    }
+}
+
+void YKRun() {
+
+    running = 1;
+    YKScheduler(0);
+}
+
+void YKDelayTask(unsigned count){
+
+    if(!count){
+        return;
+    }else{
+
+        currentTask->delay = count;
+        currentTask->state = 0;
+
+        YKScheduler(1);
+    }
+
+}
+
+void YKEnterISR(void){
+
+    YKISRCallDepth++;
+}
+
+void YKExitISR(void){
+    YKISRCallDepth--;
+
+
+    if(!YKISRCallDepth){
+        YKScheduler(1);
+    }
+}
+
+void YKTickHandler(void){
+
+
+    struct TCB* browser;
+    YKTickNum++;
+
+    browser = readyRoot;
+    while(browser){
+        if(browser->state == 0){
+            browser->delay--;
+
+
+
+
+            if(!(browser->delay)){
+                browser->state = 1;
+            }
+
+
+        }
+        browser = browser->next;
     }
 }
