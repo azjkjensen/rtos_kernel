@@ -5,9 +5,6 @@
 
 #define IDLE_TASK_PRIORITY 100
 
-// TASK STATES
-#define DELAYED_STATE 0
-#define READY_STATE 1
 
 
 struct TCB
@@ -38,19 +35,24 @@ void YKIdleTask(void);
 int YKIdleTasks[STACK_SIZE];
 
 void YKInitialize(){
-    // YKEnterMutex(); // Enable interrupts, save context.
+    YKEnterMutex(); // Enable interrupts, save context.
 
     // Create a new task with the given task on the task stack with lowest priority
     YKNewTask(&YKIdleTask,(void*)&YKIdleTasks[STACK_SIZE], IDLE_TASK_PRIORITY);
 
-    saveContextTask = &YKTCBs[0];
+    // Don't need this?
+    // saveContextTask = &YKTCBs[0];
 }
 
 // Idle task, lowest priority, spin that fool in the background.
 void YKIdleTask(void){
     // Does nothing?
     while(1){
+        // Disable interrupts
+        YKEnterMutex();
         YKIdleCount++;
+        // Enable interrupts
+        YKExitMutex();
     }
 }
 
@@ -106,7 +108,7 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
 void YKRun() {
     // printString("\nYKRun() called\n");
     running = 1;
-    YKScheduler();
+    YKScheduler(DONT_SAVE_CONTEXT);
 }
 
 void YKScheduler(unsigned char saveContext){
@@ -136,6 +138,8 @@ void YKDelayTask(unsigned count){
         // Assign the delay to the running task
         currentTask->delay = count;
         currentTask->state = BLOCKED_ST
+        // Call the scheduler to dispatch the right task
+        YKScheduler(SAVE_CONTEXT);
     }
 
 }
@@ -150,12 +154,28 @@ YKExitISR(void){
     // If there are no more registers, it is time
     // to restore context.
     if(!YKISRCallDepth){
-        YKScheduler();
+        YKScheduler(SAVE_CONTEXT);
     }
 }
 
 YKTickHandler(void){
-
+    // Decrement delay for any blocked tasks.
+    // Make tasks that are done delaying ready.
+    YKTickNum++;
+    struct TCB* browser;
+    
+    browser = readyRoot;
+    while(browser){
+        if(browser->state == BLOCKED_ST){
+            browser->delay--;
+            if(!browser->delay){
+                browser->state = READY_ST;
+            }
+            taskToRun = browser;
+            break;
+        }
+        browser = browser->next;
+    }
 }
 
 // void printTask(TCB t){

@@ -1,4 +1,5 @@
 #include "clib.h"
+#include "yakk.h"
 
 extern int KeyBuffer;
 
@@ -15,6 +16,7 @@ void tickHandler(){
     printInt(tickCount);
 	printNewLine();
     tickCount++;
+    YKTickHandler();
 }
 
 void loopLikeABoss(){
