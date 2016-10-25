@@ -109,6 +109,7 @@ void YKScheduler(unsigned char saveContext){
     struct TCB* browser;
     
     browser = readyRoot;
+    YKEnterMutex();
     while(browser){
         if(browser->state == READY_ST){
             taskToRun = browser;
@@ -132,6 +133,7 @@ void YKRun() {
 }
 
 void YKDelayTask(unsigned count){
+    YKEnterMutex();
     // If count is zero, do nothing.
     if(!count){
         return;
@@ -142,7 +144,7 @@ void YKDelayTask(unsigned count){
         // Call the scheduler to dispatch the right task
         YKScheduler(SAVE_CONTEXT);
     }
-
+    YKExitMutex();
 }
 
 void YKEnterISR(void){
@@ -157,6 +159,7 @@ void YKExitISR(void){
     if(!YKISRCallDepth){
         YKScheduler(SAVE_CONTEXT);
     }
+    YKExitMutex();
 }
 
 void YKTickHandler(void){
