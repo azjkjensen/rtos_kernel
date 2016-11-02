@@ -5,8 +5,6 @@
 
 #define IDLE_TASK_PRIORITY 100
 
-
-
 struct TCB
 {               /* the TCB struct definition */
     unsigned* stackPtr;     /* pointer to current top of stack */
@@ -14,9 +12,11 @@ struct TCB
     unsigned char priority;       /* current priority */
     struct TCB *next;        /* forward ptr for dbl linked list */
     int delay;          /* #ticks yet to wait */
+    YKSem* semBlock; /* The semaphore blocking this task, NULL if none. */
 };
 
 struct TCB YKTCBs[MAX_TASK_NUM];
+YKSEM YKSEMS[MAX_SEM_NUM];
         
 int YKCtxSwCount = 0; // Global
 int YKIdleCount = 0; // Global
@@ -29,10 +29,11 @@ struct TCB* taskToRun;
 char running = 0; // Flag for if the kernel has been started.
 
 int TCBi = 0;
-
-void YKIdleTask(void);
+int semi = 0;
 
 int YKIdleTasks[STACK_SIZE];
+
+void YKIdleTask(void);
 
 void YKInitialize(){
     YKEnterMutex(); // Enable interrupts, save context.
@@ -60,6 +61,7 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
     unsigned* newStackPointer;
     int i; 
 
+    YKEnterMutex();
     YKTCBs[TCBi].state = READY_ST;
     YKTCBs[TCBi].priority = priority;
     YKTCBs[TCBi].delay = 0;
@@ -140,7 +142,7 @@ void YKDelayTask(unsigned count){
     }else{
         // Assign the delay to the running task
         currentTask->delay = count;
-        currentTask->state = BLOCKED_ST;
+        currentTask->state = DELAYED_ST;
         // Call the scheduler to dispatch the right task
         YKScheduler(SAVE_CONTEXT);
     }
@@ -170,7 +172,7 @@ void YKTickHandler(void){
     
     browser = readyRoot;
     while(browser){
-        if(browser->state == BLOCKED_ST){
+        if(browser->state == DELAYED_ST){
             browser->delay--;
             // printString("Delaying task ");
             // printInt((int)browser->stackPtr);
@@ -184,6 +186,52 @@ void YKTickHandler(void){
         }
         browser = browser->next;
     }
+}
+
+YKSem* YKSemCreate(int val){
+    YKSem* newSem;
+    if(val < 0){
+        return NULL;
+    }
+
+    newSem = &YKSEMS[semi];
+    *newSem = val;
+    semi++;
+    return newSem;
+}
+
+YKSemPend(YKSem* sem){
+    YKEnterMutex();
+    if(!(*sem)){
+        currentTask->state = BLOCKED_ST;
+        currentTask->semBlock = sem;
+        YKScheduler(SAVE_CONTEXT);
+    }
+    (*sem)--;
+    YKExitMutex();
+
+}
+
+YKSemPost(YKSem* sem){
+    struct TCB* browser;
+
+    YKEnterMutex();
+    (*sem)++;
+    browser = readyRoot;
+
+    while(browser){
+        if(browser->state == BLOCKED_ST && browser->semBlock == sem){
+                browser->state = READY_ST;
+                browser->semBlock = NULL;
+                break;
+        }
+        browser = browser->next;
+    } 
+
+    if(YKISRCallDepth == 0){
+        YKScheduler(SAVE_CONTEXT);
+    }
+    YKExitMutex();
 }
 
 // void printTask(TCB t){
