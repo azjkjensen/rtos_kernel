@@ -15,10 +15,10 @@ int TaskPStk[TASK_STACK_SIZE];
 int TaskStatStk[TASK_STACK_SIZE];
 int TaskPRMStk[TASK_STACK_SIZE];
 
-YKSEM *PSemPtr;                        /* YKSEM must be defined in yakk.h */
-YKSEM *SSemPtr;
-YKSEM *WSemPtr;
-YKSEM *NSemPtr;
+YKSem* PSemPtr;                        /* YKSEM must be defined in yakk.h */
+YKSem* SSemPtr;
+YKSem* WSemPtr;
+YKSem* NSemPtr;
 
 void TaskWord(void)
 {

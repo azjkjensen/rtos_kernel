@@ -33,7 +33,7 @@ void keypressHandler(){
         printString("\nDELAY COMPLETE\n");
 
     } else if((char)KeyBuffer == 'p'){
-        YKSemPost(NSemPtr)
+        YKSemPost(NSemPtr);
     } else{
         printString("\nKEYPRESS (");
         printChar((char)KeyBuffer);

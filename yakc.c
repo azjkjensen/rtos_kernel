@@ -16,7 +16,7 @@ struct TCB
 };
 
 struct TCB YKTCBs[MAX_TASK_NUM];
-YKSEM YKSEMS[MAX_SEM_NUM];
+YKSem YKSEMS[MAX_SEM_NUM];
         
 int YKCtxSwCount = 0; // Global
 int YKIdleCount = 0; // Global
@@ -200,7 +200,7 @@ YKSem* YKSemCreate(int val){
     return newSem;
 }
 
-YKSemPend(YKSem* sem){
+void YKSemPend(YKSem* sem){
     YKEnterMutex();
     if(!(*sem)){
         currentTask->state = BLOCKED_ST;
@@ -212,7 +212,7 @@ YKSemPend(YKSem* sem){
 
 }
 
-YKSemPost(YKSem* sem){
+void YKSemPost(YKSem* sem){
     struct TCB* browser;
 
     YKEnterMutex();

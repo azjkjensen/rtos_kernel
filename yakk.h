@@ -11,10 +11,11 @@
 #define SAVE_CONTEXT 1
 #define DONT_SAVE_CONTEXT 0
 
-typedef int YKSEM;
+typedef int YKSem;
 
 extern int YKCtxSwCount;
 extern int YKIdleCount;
+extern YKSem* NSemPtr;
 
 void YKInitialize(void);
 void YKEnterMutex(void);
@@ -29,6 +30,6 @@ void YKDelayTask(unsigned count);
 void YKEnterISR(void);
 void YKExitISR(void);
 void YKTickHandler(void);
-YKSEM* YKSemCreate(int val);
-void YKSemPend(YKSEM *sem);
-void YKSemPost(YKSEM *sem);
+YKSem* YKSemCreate(int val);
+void YKSemPend(YKSem *sem);
+void YKSemPost(YKSem *sem);

@@ -90,5 +90,5 @@ lab5app.s: lab5app.c yakk.h yaku.h clib.h
 	c86 -g lab5app.i lab5app.s
 
 clean:
-	rm lab5.bin lab5.lst lab5final.s myinth.s yakc.s lab5app.s lab5app.i myinth.i
+	rm lab5.bin lab5.lst lab5final.s myinth.i myinth.s yakc.i yakc.s lab5app.s lab5app.i myinth.i
 		  

@@ -31,8 +31,8 @@ YKDispatcher: ; Dispatches the next task, and saves context if necessary.
     push bp					
 	mov bp, sp
 	push ax
-	mov ax, [bp+4]
-	cmp	ax, 1
+	mov ax, word[bp+4]
+	cmp	al, 1
 	pop ax
 	je 	contextSaver
 
