@@ -2,6 +2,7 @@
 
 #include "clib.h"
 #include "yakk.h"
+#include "yaku.h"
 
 #define IDLE_TASK_PRIORITY 100
 
@@ -13,23 +14,28 @@ struct TCB
     struct TCB *next;        /* forward ptr for dbl linked list */
     int delay;          /* #ticks yet to wait */
     YKSem* semBlock; /* The semaphore blocking this task, NULL if none. */
+    YKQ* qBlock;
 };
 
 struct TCB YKTCBs[MAX_TASK_NUM];
 YKSem YKSEMS[MAX_SEM_NUM];
+YKQ YKQS[MAX_Q_NUM];
         
 int YKCtxSwCount = 0; // Global
 int YKIdleCount = 0; // Global
 int YKISRCallDepth = 0; // Global
 int YKTickNum = 0;
+
 struct TCB* readyRoot;
 struct TCB* currentTask = NULL;
 struct TCB* saveContextTask = NULL;
 struct TCB* taskToRun; 
+
 char running = 0; // Flag for if the kernel has been started.
 
 int TCBi = 0;
 int semi = 0;
+int Qi = 0;
 
 int YKIdleTasks[STACK_SIZE];
 
@@ -232,6 +238,80 @@ void YKSemPost(YKSem* sem){
         YKScheduler(SAVE_CONTEXT);
     }
     YKExitMutex();
+}
+
+YKQ* YKQCreate(void** start, unsigned size){
+    YKQS[Qi].length = size;
+    YKQS[Qi].queueAddress = start;
+    YKQS[Qi].nextEmpty = start;
+    YKQS[Qi].nextRemove = start;
+    YKQS[Qi].state = EMPTYQ;
+
+    YKQIdx++;
+
+    return &YKQS[Qi - 1];
+}
+
+void* YKQPend(YKQ* q){
+    void* t;
+    YKEnterMutex();
+    if(q->state == EMPTYQ){
+        currentTask->state = BLOCKED_Q_ST;
+        currentTask->qBlock = q;
+        YKScheduler(SAVE_CONTEXT)
+    }
+
+    t = (void*)* q->nextRemove;
+    q->nextRemove++;
+    if(q->nextRemove == q->queueAddress + q->length){
+        q->nextRemove = q->queueAddress;
+    }
+
+    if(q->state == FULLQ){
+        q->state = SOMEQ;
+    } else if(q->nextRemove == q->nextEmpty){
+        q->state = EMPTYQ;
+    }
+    return t;
+}
+
+int YKQPost(YKQ* q, void* msg){
+    struct TCB* browser = readyRoot;
+    YKEnterMutex();
+
+    if(q->state == FULLQ){
+        return NULL;
+    }
+
+    *q->nextEmpty = msg;
+    q->nextEmpty++;
+    if(q->nextEmpty == q->queueAddress + q->length){
+        q->nextEmpty = q->queueAddress;
+    }
+
+    if(q->state == EMPTYQ){
+        q->state = SOMEQ;
+    } else if(q->nextRemove == q->nextEmpty){
+        q->state = FULLQ;
+    }
+
+    while(browser){
+        if(browser->state == BLOCKED_Q_ST){
+            if(browser->qBlock == q){
+                browser->state = READY_ST;
+                browser->qBlock = NULL;
+                break;
+            }
+        }
+        browser = browser->next;
+    }
+
+    if(YKISRCallDepth == 0){
+        YKScheduler(SAVE_CONTEXT);
+    }
+
+    YKExitMutex();
+    return 1;
 }
 
 // void printTask(TCB t){
