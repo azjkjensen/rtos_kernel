@@ -71,11 +71,34 @@
 
 #####################################################################
 # ECEn 425 Lab 5 Makefile
-lab5.bin: lab5final.s
-	nasm lab5final.s -o lab5.bin -l lab5.lst
+# lab5.bin: lab5final.s
+# 	nasm lab5final.s -o lab5.bin -l lab5.lst
 
-lab5final.s: clib.s myisr.s myinth.s yaks.s yakc.s lab5app.s
-	cat clib.s myisr.s myinth.s yaks.s yakc.s lab5app.s > lab5final.s
+# lab5final.s: clib.s myisr.s myinth.s yaks.s yakc.s lab5app.s
+# 	cat clib.s myisr.s myinth.s yaks.s yakc.s lab5app.s > lab5final.s
+
+# myinth.s: myinth.c
+# 	cpp myinth.c myinth.i
+# 	c86 -g myinth.i myinth.s
+              
+# yakc.s: yakc.c
+# 	cpp yakc.c yakc.i
+# 	c86 -g yakc.i yakc.s
+        
+# lab5app.s: lab5app.c yakk.h yaku.h clib.h
+# 	cpp lab5app.c lab5app.i
+# 	c86 -g lab5app.i lab5app.s
+
+# clean:
+# 	rm lab5.bin lab5.lst lab5final.s myinth.i myinth.s yakc.i yakc.s lab5app.s lab5app.i myinth.i
+
+#####################################################################
+# ECEn 425 Lab 6 Makefile
+lab6.bin: lab6final.s
+	nasm lab6final.s -o lab6.bin -l lab6.lst
+
+lab6final.s: clib.s myisr.s myinth.s yaks.s yakc.s lab6app.s
+	cat clib.s myisr.s myinth.s yaks.s yakc.s lab6app.s > lab6final.s
 
 myinth.s: myinth.c
 	cpp myinth.c myinth.i
@@ -85,10 +108,10 @@ yakc.s: yakc.c
 	cpp yakc.c yakc.i
 	c86 -g yakc.i yakc.s
         
-lab5app.s: lab5app.c yakk.h yaku.h clib.h
-	cpp lab5app.c lab5app.i
-	c86 -g lab5app.i lab5app.s
+lab6app.s: lab6app.c yakk.h yaku.h clib.h
+	cpp lab6app.c lab6app.i
+	c86 -g lab6app.i lab6app.s
 
 clean:
-	rm lab5.bin lab5.lst lab5final.s myinth.i myinth.s yakc.i yakc.s lab5app.s lab5app.i myinth.i
+	rm lab6.bin lab6.lst lab6final.s myinth.i myinth.s yakc.i yakc.s lab6app.s lab6app.i myinth.i
 		  
