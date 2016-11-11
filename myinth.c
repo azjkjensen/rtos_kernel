@@ -26,11 +26,11 @@ void tickHandler(){
     data = (data + 89) % 100;
     MsgArray[curMsgi].data = data;
 
-    curMsgi++;
+    // curMsgi++;
 
-    if(!YKQPost(MsgQPtr, (void*) &MsgArray[curMsgi]))){
+    if(!YKQPost(MsgQPtr, (void*) &MsgArray[curMsgi])){
         // Overflow has occured
-    } else if(curMsgi >= MSGARRAYSIZE){
+    } else if(++curMsgi >= MSGARRAYSIZE){
         curMsgi = 0;
     }
 
@@ -38,7 +38,7 @@ void tickHandler(){
     // printInt(tickCount);
 	// printNewLine();
     // tickCount++;
-    // YKTickHandler();
+    YKTickHandler();
 }
 
 void loopLikeABoss(){

@@ -24,7 +24,7 @@ YKQ YKQS[MAX_Q_NUM];
 int YKCtxSwCount = 0; // Global
 int YKIdleCount = 0; // Global
 int YKISRCallDepth = 0; // Global
-int YKTickNum = 0;
+int YKTickNum = 1;
 
 struct TCB* readyRoot;
 struct TCB* currentTask = NULL;
@@ -45,7 +45,7 @@ void YKInitialize(){
     YKEnterMutex(); // Enable interrupts, save context.
 
     // Create a new task with the given task on the task stack with lowest priority
-    YKNewTask(&YKIdleTask,(void*)&YKIdleTasks[STACK_SIZE], IDLE_TASK_PRIORITY);
+    YKNewTask(YKIdleTask,(void*)&YKIdleTasks[STACK_SIZE], IDLE_TASK_PRIORITY);
 
     // Don't need this?
     // saveContextTask = &YKTCBs[0];
@@ -55,6 +55,7 @@ void YKInitialize(){
 void YKIdleTask(void){
     // Does nothing?
     while(1){
+        // printString("idle running");
         // Disable interrupts
         YKEnterMutex();
         YKIdleCount++;
@@ -115,7 +116,7 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
 
 void YKScheduler(unsigned char saveContext){
     struct TCB* browser;
-    
+    //printString("Begin YKScheduler\r\n");
     browser = readyRoot;
     YKEnterMutex();
     while(browser){
@@ -127,11 +128,15 @@ void YKScheduler(unsigned char saveContext){
     }
 
     if(taskToRun != currentTask){
+        //printString("taskToRun\r\n");
         saveContextTask = currentTask;
         currentTask = taskToRun;
+        //printString("stackpointer : ");
+        //printInt((int)currentTask->stackPtr);
         YKCtxSwCount++;
         YKDispatcher(saveContext);
     }
+    // printString("End of scheduler\r\n");
 }
 
 void YKRun() {
@@ -141,18 +146,22 @@ void YKRun() {
 }
 
 void YKDelayTask(unsigned count){
+    // printString("Entering DelayTask\r\n");
     YKEnterMutex();
     // If count is zero, do nothing.
     if(!count){
+        //printString("!count\r\n");
         return;
     }else{
+        //printString("count\r\n");
         // Assign the delay to the running task
         currentTask->delay = count;
         currentTask->state = DELAYED_ST;
         // Call the scheduler to dispatch the right task
         YKScheduler(SAVE_CONTEXT);
+        YKExitMutex();
     }
-    YKExitMutex();
+    //printString("Befor exit mutex\r\n");
 }
 
 void YKEnterISR(void){
@@ -166,8 +175,8 @@ void YKExitISR(void){
     // to restore context.
     if(!YKISRCallDepth){
         YKScheduler(SAVE_CONTEXT);
+        YKExitMutex();
     }
-    YKExitMutex();
 }
 
 void YKTickHandler(void){
@@ -180,10 +189,11 @@ void YKTickHandler(void){
     while(browser){
         if(browser->state == DELAYED_ST){
             browser->delay--;
-            // printString("Delaying task ");
-            // printInt((int)browser->stackPtr);
-            // printNewLine();
-            // printInt(browser->delay);
+            //printString("Delaying task ");
+            //printInt((int)browser->stackPtr);
+            //printNewLine();
+            //printInt(browser->delay);
+            //printNewLine();
             if(!(browser->delay)){
                 browser->state = READY_ST;
             }
@@ -247,8 +257,8 @@ YKQ* YKQCreate(void** start, unsigned size){
     YKQS[Qi].nextRemove = start;
     YKQS[Qi].state = EMPTYQ;
 
-    YKQIdx++;
-
+    Qi++;
+    //printString("Before return YKQCreate\r\n");
     return &YKQS[Qi - 1];
 }
 
@@ -258,7 +268,7 @@ void* YKQPend(YKQ* q){
     if(q->state == EMPTYQ){
         currentTask->state = BLOCKED_Q_ST;
         currentTask->qBlock = q;
-        YKScheduler(SAVE_CONTEXT)
+        YKScheduler(SAVE_CONTEXT);
     }
 
     t = (void*)* q->nextRemove;

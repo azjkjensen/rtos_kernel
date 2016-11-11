@@ -168,11 +168,9 @@ void STask(void)                /* tracks statistics */
 void main(void)
 {
     YKInitialize();
-    
     /* create queue, at least one user task, etc. */
     GlobalFlag = 0;
     MsgQPtr = YKQCreate(MsgQ, MSGQSIZE);
     YKNewTask(STask, (void *) &STaskStk[TASK_STACK_SIZE], 30);
-    
     YKRun();
 }

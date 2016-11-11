@@ -29,7 +29,7 @@ typedef struct {
 extern int YKCtxSwCount;
 extern int YKIdleCount;
 extern YKSem* NSemPtr;
-
+extern int YKTickNum;
 void YKInitialize(void);
 void YKEnterMutex(void);
 void YKExitMutex(void);
