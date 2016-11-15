@@ -3,6 +3,8 @@ align	2
 
 reset:
 
+    push bp
+    mov bp, sp
     call resetHandler
 
 
@@ -54,10 +56,12 @@ keypress:
     push es
     push ds
     ;Enable interrupts
+    call YKEnterISR
     sti
     call keypressHandler
     cli
     call signalEOI
+    call YKExitISR
 
     pop ds
     pop es

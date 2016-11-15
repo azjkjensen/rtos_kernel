@@ -2,10 +2,9 @@
 
 #include "clib.h"
 #include "yakk.h"
+#include "yaku.h"
 
 #define IDLE_TASK_PRIORITY 100
-
-
 
 struct TCB
 {               /* the TCB struct definition */
@@ -14,31 +13,39 @@ struct TCB
     unsigned char priority;       /* current priority */
     struct TCB *next;        /* forward ptr for dbl linked list */
     int delay;          /* #ticks yet to wait */
+    YKSem* semBlock; /* The semaphore blocking this task, NULL if none. */
+    YKQ* qBlock;
 };
 
 struct TCB YKTCBs[MAX_TASK_NUM];
+YKSem YKSEMS[MAX_SEM_NUM];
+YKQ YKQS[MAX_Q_NUM];
         
 int YKCtxSwCount = 0; // Global
 int YKIdleCount = 0; // Global
 int YKISRCallDepth = 0; // Global
-int YKTickNum = 0;
+int YKTickNum = 1;
+
 struct TCB* readyRoot;
 struct TCB* currentTask = NULL;
 struct TCB* saveContextTask = NULL;
 struct TCB* taskToRun; 
+
 char running = 0; // Flag for if the kernel has been started.
 
 int TCBi = 0;
-
-void YKIdleTask(void);
+int semi = 0;
+int Qi = 0;
 
 int YKIdleTasks[STACK_SIZE];
+
+void YKIdleTask(void);
 
 void YKInitialize(){
     YKEnterMutex(); // Enable interrupts, save context.
 
     // Create a new task with the given task on the task stack with lowest priority
-    YKNewTask(&YKIdleTask,(void*)&YKIdleTasks[STACK_SIZE], IDLE_TASK_PRIORITY);
+    YKNewTask(YKIdleTask,(void*)&YKIdleTasks[STACK_SIZE], IDLE_TASK_PRIORITY);
 
     // Don't need this?
     // saveContextTask = &YKTCBs[0];
@@ -48,6 +55,7 @@ void YKInitialize(){
 void YKIdleTask(void){
     // Does nothing?
     while(1){
+        // printString("idle running");
         // Disable interrupts
         YKEnterMutex();
         YKIdleCount++;
@@ -60,6 +68,7 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
     unsigned* newStackPointer;
     int i; 
 
+    YKEnterMutex();
     YKTCBs[TCBi].state = READY_ST;
     YKTCBs[TCBi].priority = priority;
     YKTCBs[TCBi].delay = 0;
@@ -107,7 +116,7 @@ void YKNewTask(void (*task)(void), void* taskStack, unsigned char priority){
 
 void YKScheduler(unsigned char saveContext){
     struct TCB* browser;
-    
+    //printString("Begin YKScheduler\r\n");
     browser = readyRoot;
     YKEnterMutex();
     while(browser){
@@ -119,11 +128,15 @@ void YKScheduler(unsigned char saveContext){
     }
 
     if(taskToRun != currentTask){
+        //printString("taskToRun\r\n");
         saveContextTask = currentTask;
         currentTask = taskToRun;
+        //printString("stackpointer : ");
+        //printInt((int)currentTask->stackPtr);
         YKCtxSwCount++;
         YKDispatcher(saveContext);
     }
+    // printString("End of scheduler\r\n");
 }
 
 void YKRun() {
@@ -133,18 +146,22 @@ void YKRun() {
 }
 
 void YKDelayTask(unsigned count){
+    // printString("Entering DelayTask\r\n");
     YKEnterMutex();
     // If count is zero, do nothing.
     if(!count){
+        //printString("!count\r\n");
         return;
     }else{
+        //printString("count\r\n");
         // Assign the delay to the running task
         currentTask->delay = count;
-        currentTask->state = BLOCKED_ST;
+        currentTask->state = DELAYED_ST;
         // Call the scheduler to dispatch the right task
         YKScheduler(SAVE_CONTEXT);
+        YKExitMutex();
     }
-    YKExitMutex();
+    //printString("Befor exit mutex\r\n");
 }
 
 void YKEnterISR(void){
@@ -158,8 +175,8 @@ void YKExitISR(void){
     // to restore context.
     if(!YKISRCallDepth){
         YKScheduler(SAVE_CONTEXT);
+        YKExitMutex();
     }
-    YKExitMutex();
 }
 
 void YKTickHandler(void){
@@ -170,12 +187,13 @@ void YKTickHandler(void){
     
     browser = readyRoot;
     while(browser){
-        if(browser->state == BLOCKED_ST){
+        if(browser->state == DELAYED_ST){
             browser->delay--;
-            // printString("Delaying task ");
-            // printInt((int)browser->stackPtr);
-            // printNewLine();
-            // printInt(browser->delay);
+            //printString("Delaying task ");
+            //printInt((int)browser->stackPtr);
+            //printNewLine();
+            //printInt(browser->delay);
+            //printNewLine();
             if(!(browser->delay)){
                 browser->state = READY_ST;
             }
@@ -184,6 +202,126 @@ void YKTickHandler(void){
         }
         browser = browser->next;
     }
+}
+
+YKSem* YKSemCreate(int val){
+    YKSem* newSem;
+    if(val < 0){
+        return NULL;
+    }
+
+    newSem = &YKSEMS[semi];
+    *newSem = val;
+    semi++;
+    return newSem;
+}
+
+void YKSemPend(YKSem* sem){
+    YKEnterMutex();
+    if(!(*sem)){
+        currentTask->state = BLOCKED_ST;
+        currentTask->semBlock = sem;
+        YKScheduler(SAVE_CONTEXT);
+    }
+    (*sem)--;
+    YKExitMutex();
+
+}
+
+void YKSemPost(YKSem* sem){
+    struct TCB* browser;
+
+    YKEnterMutex();
+    (*sem)++;
+    browser = readyRoot;
+
+    while(browser){
+        if(browser->state == BLOCKED_ST && browser->semBlock == sem){
+                browser->state = READY_ST;
+                browser->semBlock = NULL;
+                break;
+        }
+        browser = browser->next;
+    } 
+
+    if(YKISRCallDepth == 0){
+        YKScheduler(SAVE_CONTEXT);
+    }
+    YKExitMutex();
+}
+
+YKQ* YKQCreate(void** start, unsigned size){
+    YKQS[Qi].length = size;
+    YKQS[Qi].queueAddress = start;
+    YKQS[Qi].nextEmpty = start;
+    YKQS[Qi].nextRemove = start;
+    YKQS[Qi].state = EMPTYQ;
+
+    Qi++;
+    //printString("Before return YKQCreate\r\n");
+    return &YKQS[Qi - 1];
+}
+
+void* YKQPend(YKQ* q){
+    void* t;
+    YKEnterMutex();
+    if(q->state == EMPTYQ){
+        currentTask->state = BLOCKED_Q_ST;
+        currentTask->qBlock = q;
+        YKScheduler(SAVE_CONTEXT);
+    }
+
+    t = (void*)* q->nextRemove;
+    q->nextRemove++;
+    if(q->nextRemove == q->queueAddress + q->length){
+        q->nextRemove = q->queueAddress;
+    }
+
+    if(q->state == FULLQ){
+        q->state = SOMEQ;
+    } else if(q->nextRemove == q->nextEmpty){
+        q->state = EMPTYQ;
+    }
+    return t;
+}
+
+int YKQPost(YKQ* q, void* msg){
+    struct TCB* browser = readyRoot;
+    YKEnterMutex();
+
+    if(q->state == FULLQ){
+        return NULL;
+    }
+
+    *q->nextEmpty = msg;
+    q->nextEmpty++;
+    if(q->nextEmpty == q->queueAddress + q->length){
+        q->nextEmpty = q->queueAddress;
+    }
+
+    if(q->state == EMPTYQ){
+        q->state = SOMEQ;
+    } else if(q->nextRemove == q->nextEmpty){
+        q->state = FULLQ;
+    }
+
+    while(browser){
+        if(browser->state == BLOCKED_Q_ST){
+            if(browser->qBlock == q){
+                browser->state = READY_ST;
+                browser->qBlock = NULL;
+                break;
+            }
+        }
+        browser = browser->next;
+    }
+
+    if(YKISRCallDepth == 0){
+        YKScheduler(SAVE_CONTEXT);
+    }
+
+    YKExitMutex();
+    return 1;
 }
 
 // void printTask(TCB t){

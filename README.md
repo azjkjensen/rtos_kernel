@@ -4,7 +4,7 @@
 
 Implemented using the tools in BYU's CAEDM lab.
 
-### Kernal specification:
+### Kernel specification:
 
 http://ece425web.groups.et.byu.net/stable/labs/kernel.html
 
