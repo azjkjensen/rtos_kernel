@@ -273,6 +273,7 @@ void* YKQPend(YKQ* q){
 
     t = (void*)* q->nextRemove;
     q->nextRemove++;
+
     if(q->nextRemove == q->queueAddress + q->length){
         q->nextRemove = q->queueAddress;
     }
@@ -282,19 +283,22 @@ void* YKQPend(YKQ* q){
     } else if(q->nextRemove == q->nextEmpty){
         q->state = EMPTYQ;
     }
+    YKExitMutex();
     return t;
 }
 
 int YKQPost(YKQ* q, void* msg){
-    struct TCB* browser = readyRoot;
+    struct TCB* browser;
     YKEnterMutex();
 
     if(q->state == FULLQ){
+        YKExitMutex();
         return NULL;
     }
 
-    *q->nextEmpty = msg;
+    *(q->nextEmpty) = msg;
     q->nextEmpty++;
+    // printString("NextEmpty: ")
     if(q->nextEmpty == q->queueAddress + q->length){
         q->nextEmpty = q->queueAddress;
     }
@@ -304,6 +308,7 @@ int YKQPost(YKQ* q, void* msg){
     } else if(q->nextRemove == q->nextEmpty){
         q->state = FULLQ;
     }
+    browser = readyRoot;
 
     while(browser){
         if(browser->state == BLOCKED_Q_ST){
@@ -314,6 +319,7 @@ int YKQPost(YKQ* q, void* msg){
             }
         }
         browser = browser->next;
+        YKExitMutex();
     }
 
     if(YKISRCallDepth == 0){
