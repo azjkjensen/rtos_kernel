@@ -49,3 +49,8 @@ void YKSemPost(YKSem *sem);
 YKQ* YKQCreate(void** start, unsigned size);
 void* YKQPend(YKQ* q);
 int YKQPost(YKQ* q, void* msg);
+YKEVENT *YKEventCreate(unsigned initialValue);
+unsigned YKEventPend(YKEVENT *event, unsigned eventMask, int waitMode);
+void YKEventSet(YKEVENT *event, unsigned eventMask);
+void YKEventReset(YKEVENT *event, unsigned eventMask);
+
