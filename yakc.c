@@ -17,6 +17,12 @@ struct TCB
     YKQ* qBlock;
 };
 
+// Represents a 16-bit flag group
+struct YKEVENT
+{
+    unsigned flag;
+} YKEVENT;
+
 struct TCB YKTCBs[MAX_TASK_NUM];
 YKSem YKSEMS[MAX_SEM_NUM];
 YKQ YKQS[MAX_Q_NUM];
@@ -329,6 +335,22 @@ int YKQPost(YKQ* q, void* msg){
     YKExitMutex();
     return 1;
 }
+
+// Lab 7 EVent functions 
+YKEVENT *YKEventCreate(unsigned initialValue) {
+    YKEVENT newEvent = {initialValue};
+    return *newEvent;
+}
+unsigned YKEventPend(YKEVENT *event, unsigned eventMask, int waitMode) {
+
+}
+void YKEventSet(YKEVENT *event, unsigned eventMask) {
+    &(*event).flag = &(*event).flag | eventMask;
+}
+void YKEventReset(YKEVENT *event, unsigned eventMask) {
+    &(*event).flag = &(*event).flag & eventMask;
+}
+
 
 // void printTask(TCB t){
 //     if(!t.priority){
