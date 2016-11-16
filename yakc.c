@@ -15,6 +15,7 @@ struct TCB
     int delay;          /* #ticks yet to wait */
     YKSem* semBlock; /* The semaphore blocking this task, NULL if none. */
     YKQ* qBlock;
+    
 };
 
 // Represents a 16-bit flag group
@@ -346,9 +347,11 @@ unsigned YKEventPend(YKEVENT *event, unsigned eventMask, int waitMode) {
 }
 void YKEventSet(YKEVENT *event, unsigned eventMask) {
     &(*event).flag = &(*event).flag | eventMask;
+
+
 }
 void YKEventReset(YKEVENT *event, unsigned eventMask) {
-    &(*event).flag = &(*event).flag & eventMask;
+    &(*event).flag = &(*event).flag & ~eventMask;
 }
 
 
