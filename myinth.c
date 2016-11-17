@@ -1,13 +1,13 @@
 #include "lab6defs.h"
 #include "clib.h"
 #include "yakk.h"
-
+#include "lab7defs.h"
 extern int KeyBuffer;
 extern YKQ* MsgQPtr;
 extern int YKTickNum;
-extern int GlobalFlag;
+// extern int GlobalFlag;
 
-extern struct msg MsgArray[];
+// extern struct msg MsgArray[];
 
 int tickCount = 1;
 static int someLocalVariable = 0;
@@ -22,17 +22,17 @@ void tickHandler(){
     static int curMsgi = 0;
     static int data = 0;
 
-    MsgArray[curMsgi].tick = YKTickNum;
+    // MsgArray[curMsgi].tick = YKTickNum;
     data = (data + 89) % 100;
-    MsgArray[curMsgi].data = data;
+    // MsgArray[curMsgi].data = data;
 
     // curMsgi++;
 
-    if(!YKQPost(MsgQPtr, (void*) &MsgArray[curMsgi])){
-        // Overflow has occured
-    } else if(++curMsgi >= MSGARRAYSIZE){
-        curMsgi = 0;
-    }
+    // if(!YKQPost(MsgQPtr, (void*) &MsgArray[curMsgi])){
+    //     // Overflow has occured
+    // } else if(++curMsgi >= MSGARRAYSIZE){
+    //     curMsgi = 0;
+    // }
 
     // printString("\nTick ");
     // printInt(tickCount);
@@ -49,8 +49,8 @@ void loopLikeABoss(){
 }
 
 void keypressHandler(){
-    GlobalFlag = 1; // This may not be required according to lab7 spec
     char c;
+    // GlobalFlag = 1; // This may not be required according to lab7 spec
     c = KeyBuffer;
 
     if(c == 'a') YKEventSet(charEvent, EVENT_A_KEY);

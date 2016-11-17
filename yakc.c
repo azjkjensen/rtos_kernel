@@ -15,19 +15,17 @@ struct TCB
     int delay;          /* #ticks yet to wait */
     YKSem* semBlock; /* The semaphore blocking this task, NULL if none. */
     YKQ* qBlock;
-    
+    // Lab7 event properties
+    YKEVENT* event;
+    int mode;
+    unsigned mask;
 };
-
-// Represents a 16-bit flag group
-struct YKEVENT
-{
-    unsigned flag;
-} YKEVENT;
 
 struct TCB YKTCBs[MAX_TASK_NUM];
 YKSem YKSEMS[MAX_SEM_NUM];
 YKQ YKQS[MAX_Q_NUM];
-        
+YKEVENT YKEvents[MAX_EVENT_SIZE];
+
 int YKCtxSwCount = 0; // Global
 int YKIdleCount = 0; // Global
 int YKISRCallDepth = 0; // Global
@@ -43,6 +41,7 @@ char running = 0; // Flag for if the kernel has been started.
 int TCBi = 0;
 int semi = 0;
 int Qi = 0;
+int eventIndex = 0;
 
 int YKIdleTasks[STACK_SIZE];
 
@@ -338,20 +337,107 @@ int YKQPost(YKQ* q, void* msg){
 }
 
 // Lab 7 EVent functions 
+/*This function creates and initializes an event flags group and returns a pointer to the kernel's
+data structure used to maintain that flags group. 
+YKEVENT is a typedef defined in a kernel header file that must be included in any user file that uses event flags. 
+The structure it defines will be used to keep track of the event flags. 
+The function must be called exactly once for each event group, and that call is typically done in main in the user code.
+The parameter initialValue gives the initial value that the flags group is to have.
+A one bit means that the event is set and a zero bit means that it is not set.
+Each event flags group is represented by a 16-bit value, allowing for 16 events in a single flags group.*/
 YKEVENT *YKEventCreate(unsigned initialValue) {
-    YKEVENT newEvent = {initialValue};
-    return *newEvent;
+    YKEvents[eventIndex].flag = initialValue;
+    eventIndex++;
+
+    return &YKEvents[eventIndex-1];
 }
+
+/*This function tests the value of the given event flags group against the mask and mode given in the eventMask and waitMode parameters.
+If the conditions for the event flags are met then the function should return immediately.
+Otherwise the calling task is suspended by the kernel until the the conditions are met and the scheduler is called.
+The two wait modes supported are EVENT_WAIT_ALL, where the task should block until all the bits set 
+in eventMask are also set in the event flags group, and EVENT_WAIT_ANY,
+where the task should block until any of the bits set in eventMask are also set in the event flags group. 
+EVENT_WAIT_ANY and EVENT_WAIT_ALL should each be defined in your kernel header file using #define. 
+(Their actual values are not important as long as they are distinct.)
+The value returned by the function is always the value of the event flags group at the time the function returns -- 
+when the calling task resumes execution.
+(Note that other function calls to set or reset event flags may have executed between this point in time and when the task was unblocked.)
+This function is called only by tasks and never by ISRs or interrupt handlers.*/
 unsigned YKEventPend(YKEVENT *event, unsigned eventMask, int waitMode) {
+    YKEnterMutex();
 
+    if(waitMode == EVENT_WAIT_ALL){
+        if(event->flag == eventMask) {
+            return event->flag;
+        } 
+    }
+    else if(waitMode == EVENT_WAIT_ANY){
+        if(event->flag & eventMask){
+            return event->flag;
+        }
+    }
+
+    currentTask->event = event;
+    currentTask->mask = eventMask;
+    currentTask->mode = waitMode;
+    currentTask->state = BLOCKED_EV_ST;
+
+    YKScheduler(SAVE_CONTEXT);
+
+    YKExitMutex();
+    return event->flag;
 }
+
+/*This function is similar to a post function. 
+It causes all the bits that are set in the parameter eventMask to be set in the given event flags group. 
+Any tasks waiting on this event flags group need to have their wait conditions checked against the new values of the flags. 
+Any task whose conditions are met should be made ready. This function can be called from both task code and interrupt handlers. 
+If one or more tasks was made ready and the function is called from task code then the scheduler should be called at the end of the function. 
+If called from an interrupt handler then the scheduler should not be called. 
+It will be called shortly in YKExitISR after all ISR actions are completed.*/
 void YKEventSet(YKEVENT *event, unsigned eventMask) {
-    &(*event).flag = &(*event).flag | eventMask;
+    struct TCB* browser;
+    event->flag = event->flag | eventMask;
+    
+    YKEnterMutex();
 
+    browser = readyRoot;
+    while(browser){
+        if ((browser->state == BLOCKED_EV_ST) && (browser->event == event)) {
+            if(browser->mode == EVENT_WAIT_ALL){
+                if(event->flag == browser->mask){
+                    printString("ALL");
+                    browser->state = READY_ST;
+                    browser->event = NULL;
+                    browser->mask = NULL;
+                    browser->mode = NULL;
+                } 
+            }
+            else if(browser->mode == EVENT_WAIT_ANY){
+                if(event->flag & browser->mask){
+                    printString("ANY");
+                    browser->state = READY_ST;
+                    browser->event = NULL;
+                    browser->mask = NULL;
+                    browser->mode = NULL;
+                }
+            }
+        }
+        
+        browser = browser->next;
+        YKExitMutex();
+    }
 
+    if(YKISRCallDepth == 0){
+        YKScheduler(SAVE_CONTEXT);
+    }
+
+    YKExitMutex();
 }
+
 void YKEventReset(YKEVENT *event, unsigned eventMask) {
-    &(*event).flag = &(*event).flag & ~eventMask;
+    event->flag = event->flag & ~eventMask;
 }
 
 
@@ -363,7 +449,7 @@ void YKEventReset(YKEVENT *event, unsigned eventMask) {
 //     printNewLine();
 //     printString("Task Printout:\n");
 //     printString("SP: ");
-//     printInt((int)t.stackPtr);
+//     printIninitialValuet((int)t.stackPtr);
 //     printNewLine();
 //     printString("Priority: ");
 //     printInt(t.priority);

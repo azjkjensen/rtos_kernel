@@ -8,6 +8,7 @@
 #define BLOCKED_ST 2
 #define BLOCKED_Q_ST 3
 #define RUN_STATE 4
+#define BLOCKED_EV_ST 5
 
 #define EMPTYQ 0
 #define FULLQ 1
@@ -15,6 +16,9 @@
 
 #define SAVE_CONTEXT 1
 #define DONT_SAVE_CONTEXT 0
+
+#define EVENT_WAIT_ANY 1
+#define EVENT_WAIT_ALL 2
 
 typedef int YKSem;
 
@@ -25,6 +29,13 @@ typedef struct {
     void** nextRemove;
     unsigned state;
 } YKQ;
+
+
+// Represents a 16-bit flag group
+typedef struct YKEVENT
+{
+    unsigned flag;
+} YKEVENT;
 
 extern int YKCtxSwCount;
 extern int YKIdleCount;
