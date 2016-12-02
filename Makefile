@@ -116,13 +116,38 @@
 # 	rm lab4c.bin lab4c.lst lab4cfinal.s myinth.s yakc.s lab4c_app.s lab4c_app.i myinth.i\
 # 		yakc.i 
 
-#####################################################################
-# ECEn 425 Lab 7 Makefile
-lab7.bin: lab7final.s
-	nasm lab7final.s -o lab7.bin -l lab7.lst
+# #####################################################################
+# # ECEn 425 Lab 7 Makefile
+# lab7.bin: lab7final.s
+# 	nasm lab7final.s -o lab7.bin -l lab7.lst
 
-lab7final.s: clib.s myisr.s myinth.s yaks.s yakc.s lab7app.s
-	cat clib.s myisr.s myinth.s yaks.s yakc.s lab7app.s > lab7final.s
+# lab7final.s: clib.s myisr.s myinth.s yaks.s yakc.s lab7app.s
+# 	cat clib.s myisr.s myinth.s yaks.s yakc.s lab7app.s > lab7final.s
+
+# myinth.s: myinth.c
+# 	cpp myinth.c myinth.i
+# 	c86 -g myinth.i myinth.s
+              
+# yakc.s: yakc.c
+# 	cpp yakc.c yakc.i
+# 	c86 -g yakc.i yakc.s
+        
+# lab7app.s: lab7app.c yakk.h yaku.h clib.h
+# 	cpp lab7app.c lab7app.i
+# 	c86 -g lab7app.i lab7app.s
+
+# clean:
+# 	rm lab4c.bin lab4c.lst lab7final.s myinth.s yakc.s lab7app.s lab7app.i myinth.i\
+# 		yakc.i 
+
+
+#####################################################################
+# ECEn 425 Lab 8 Makefile
+lab8.bin: lab8final.s
+	nasm lab8final.s -o lab8.bin -l lab8.lst
+
+lab8final.s: clib.s myisr.s myinth.s yaks.s yakc.s simptrisApp.s
+	cat clib.s myisr.s myinth.s yaks.s yakc.s simptrisApp.s simptris.s > lab8final.s
 
 myinth.s: myinth.c
 	cpp myinth.c myinth.i
@@ -132,10 +157,10 @@ yakc.s: yakc.c
 	cpp yakc.c yakc.i
 	c86 -g yakc.i yakc.s
         
-lab7app.s: lab7app.c yakk.h yaku.h clib.h
-	cpp lab7app.c lab7app.i
-	c86 -g lab7app.i lab7app.s
+simptrisApp.s: simptrisApp.c yakk.h yaku.h clib.h
+	cpp simptrisApp.c simptrisApp.i
+	c86 -g simptrisApp.i simptrisApp.s
 
 clean:
-	rm lab4c.bin lab4c.lst lab7final.s myinth.s yakc.s lab7app.s lab7app.i myinth.i\
+	rm lab4c.bin lab4c.lst lab8final.s myinth.s yakc.s simptrisApp.s simptrisApp.i myinth.i\
 		yakc.i 
