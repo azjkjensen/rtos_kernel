@@ -5,6 +5,8 @@
 extern int KeyBuffer;
 extern YKQ* MsgQPtr;
 extern int YKTickNum;
+extern YKSem* communicateSem;
+extern YKSem* newPieceSem;
 // extern int GlobalFlag;
 
 // extern struct msg MsgArray[];
@@ -15,6 +17,14 @@ static int someLocalVariable = 0;
 void resetHandler(){
     // printString("RESETTING");
     exit(0);
+}
+
+void recievedCommandHandler() {
+    YKSemPost(communicateSem);
+}
+
+void newPieceHandler() {
+    YKSemPost(newPieceSem);
 }
 
 void tickHandler(){

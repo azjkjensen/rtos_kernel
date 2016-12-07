@@ -76,26 +76,6 @@ keypress:
     iret
 
 gameOver:
-    push ax
-    push bx
-    push cx
-    push dx
-    push si
-    push di
-    push bp
-    push es
-    push ds
-
-    pop ds
-    pop es
-    pop bp
-    pop di
-    pop si
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    
     iret
     
 newPiece:
@@ -109,6 +89,13 @@ newPiece:
     push es
     push ds
 
+    call YKEnterISR
+    sti
+    call newPieceHandler
+    cli 
+    call signalEOI
+    call YKExitISR
+
     pop ds
     pop es
     pop bp
@@ -120,6 +107,7 @@ newPiece:
     pop ax
     
     iret
+
 received:
     push ax
     push bx
@@ -130,6 +118,13 @@ received:
     push bp
     push es
     push ds
+
+    call YKEnterISR
+    sti
+    call recievedCommandHandler
+    cli 
+    call signalEOI
+    call YKExitISR
 
     pop ds
     pop es
@@ -142,6 +137,7 @@ received:
     pop ax
     
     iret 
+
 touchdown:
     push ax
     push bx
