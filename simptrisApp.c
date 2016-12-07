@@ -14,6 +14,8 @@
 #define MSGQSIZE 20
 #define MSGARRAYSIZE 30
 
+#define STRAIGHT_LIMIT 7
+
 extern unsigned NewPieceID;
 extern unsigned NewPieceType;
 extern unsigned NewPieceOrientation;
@@ -23,6 +25,9 @@ unsigned MyNewPieceID;
 unsigned MyNewPieceType;
 unsigned MyNewPieceOrientation;
 unsigned MyNewPieceColumn;
+
+unsigned straightCounter;
+unsigned cornerCounter;
 
 YKQ* commandQPtr;
 YKSem* communicateSem;
@@ -50,8 +55,8 @@ msg MsgArray[MSGARRAYSIZE];  /* buffers for message content */
 // end message queue
 
 int getMinValueIndex();
-void slide(int targetCol, unsigned next);
-void rotate(int targetOrientation, unsigned next);
+void slide(int targetCol, unsigned* next);
+void rotate(int targetOrientation, unsigned* next);
 void myPost(void (*func)(int, int), int id, int direction, unsigned* next);
 void communicateTask();
 
@@ -89,17 +94,31 @@ void buildColumnsArray(int centerCol, int rotation, int type) {
     }
 }
 
-void placement(int bestX, int rotation, int type, unsigned next) {
+void placement(int bestX, int rotation, int type, unsigned* next) {
     if (MyNewPieceColumn == 0) {
-        myPost(&SlidePiece, MyNewPieceID, RIGHT, &next);
+        // printString("\nSliding ");
+        // printInt(MyNewPieceID);
+        // printString(" right\n");
+        myPost(&SlidePiece, MyNewPieceID, RIGHT, next);
         MyNewPieceColumn++;
     } else if (MyNewPieceColumn == 5) {
         // printString("column 5");
-        myPost(&SlidePiece, MyNewPieceID, LEFT, &next);
+        // printString("\nSliding ");
+        // printInt(MyNewPieceID);
+        // printString(" left\n");
+        myPost(&SlidePiece, MyNewPieceID, LEFT, next);
         MyNewPieceColumn--;
     } 
-    rotate(rotation, next);
+
+    // printString("\nTarget: ");
+    // printInt(bestX);
+    // printString(" Column: ");
+    // printInt(MyNewPieceColumn);
+    // printString("Piece ID ");
+    // printInt(MyNewPieceID);
+
     slide(bestX, next);
+    rotate(rotation, next);
     buildColumnsArray(bestX, rotation, type);
 
     // printString("\nbest x: ");
@@ -109,23 +128,104 @@ void placement(int bestX, int rotation, int type, unsigned next) {
 }
 
 void decidePlacementTask(void) {
-    unsigned next = 0;
-    while (1) {
-        YKSemPend(newPieceSem);
-        YKEnterMutex();
-        MyNewPieceID = NewPieceID;
-        MyNewPieceType = NewPieceType;
-        MyNewPieceOrientation = NewPieceOrientation;
-        MyNewPieceColumn = NewPieceColumn;
+    static unsigned next = 0;
+    static unsigned orientFlag = 0;
+    int temp;
+    int swap;
+    YKEnterMutex();
+    straightCounter = 0;
+    cornerCounter = 0;
+    YKExitMutex();
+    // while (1) {
+    //     YKSemPend(newPieceSem);
+    //     YKEnterMutex();
+    //     MyNewPieceID = NewPieceID;
+    //     MyNewPieceType = NewPieceType;
+    //     MyNewPieceOrientation = NewPieceOrientation;
+    //     MyNewPieceColumn = NewPieceColumn;
 
-        YKExitMutex();
-        // printString("\ndeciding...\n");
-        // printString("type: ");
-        // printInt(NewPieceType);
-        // printString("\norientation: ");
-        // printInt(NewPieceOrientation);
-        // printString("\ncolumn: ");
-        // printInt(NewPieceColumn);
+    //     YKExitMutex();
+    //     if(MyNewPieceType == 0){ // Corner piece
+    //         printString("\nCorner\n");
+    //         // Check for edge
+    //         if(MyNewPieceColumn == 5){
+    //             slide(4,&next);
+    //             MyNewPieceColumn--;
+    //         } else if(MyNewPieceColumn == 0){
+    //             slide(1,&next);
+    //             MyNewPieceColumn++;
+    //         }
+    //         if(orientFlag){ // Orientation 2
+
+    //             if(swap){
+    //                 // printString("\nTarget: ");
+    //                 // printInt(2);
+    //                 // printString(" Column: ");
+    //                 printInt(MyNewPieceColumn);
+    //                 rotate(2, &next);
+    //                 slide(2, &next);
+    //             }else{
+    //                 // printString("\nTarget: ");
+    //                 // printInt(5);
+    //                 // printString(" Column: ");
+    //                 printInt(MyNewPieceColumn);
+    //                 rotate(2, &next);
+    //                 slide(5, &next);
+    //             }
+
+                
+    //             // printString("\nTarget: ");
+    //             // printInt(2);
+    //             // printString(" Orientation: ");
+    //             // printInt(MyNewPieceOrientation);
+    //             // placement(5,2,MyNewPieceType,&next);
+    //         }else{
+    //             if(cornerCounter > straightCounter){
+    //                 // Switch sides for two corner pieces
+    //                 swap = (swap == 1)? 0:1;
+    //                 temp = cornerCounter;
+    //                 cornerCounter = straightCounter;
+    //                 straightCounter = temp;
+    //             }
+    //             // Slide then rotate
+    //             if(swap){
+    //                 placement(0,0,MyNewPieceType,&next);
+    //             }else{
+    //                 placement(3,0,MyNewPieceType,&next);
+    //             }
+    //         }
+    //         orientFlag = (orientFlag == 1)? 0:1;
+    //         if(orientFlag == 0){
+    //             cornerCounter++;
+    //         }
+    //     }else{
+    //         printString("\nStraight\n");
+    //         if(cornerCounter < straightCounter && orientFlag == 0){
+    //             swap = (swap == 1)? 0:1;
+    //             temp = cornerCounter;
+    //             cornerCounter = straightCounter;
+    //             straightCounter = temp;
+    //             //Place on the right.
+    //             straightCounter = 0;
+    //         }
+    //         straightCounter++;
+    //         if(swap){
+    //             // printString("\nHERE ");
+    //             // printInt(MyNewPieceType);
+    //             placement(4,0,MyNewPieceType, &next);
+    //         }else{
+    //             placement(1,0,MyNewPieceType, &next);
+    //         }
+
+    //     }
+
+    // printString("\ndeciding...\n");
+    //     printString("\ntype: ");
+    //     printInt(NewPieceType);
+    //     printString("\norientation: ");
+    //     printInt(NewPieceOrientation);
+    //     printString("\ncolumn: ");
+    //     printInt(NewPieceColumn);
         if (MyNewPieceType == 0) {    // 0 for corner
             int col;
             int bestX1, bestX2;
@@ -139,7 +239,7 @@ void decidePlacementTask(void) {
             // Rotation 2
             printNewLine();
             for (col = 0; col < FIELD_WIDTH -1; col++) {
-                printInt(columns[col]);
+                // printInt(columns[col]);
                 if (columns[col] == columns[col + 1] + 1) {
                     if (columns[col] < bestHeight1) {
                         bestX1 = col + 1;
@@ -176,7 +276,7 @@ void decidePlacementTask(void) {
                     SlidePiece(int ID, int direction)
                     RotatePiece(int ID, int direction) 
                 */
-                placement(bestX1, rotation, 0, next);
+                placement(bestX1, rotation, 0, &next);
 
                 if (bestX1 == -1) {
                     printString("There was no good spot found");
@@ -191,7 +291,7 @@ void decidePlacementTask(void) {
                         SlidePiece(int ID, int direction)
                         RotatePiece(int ID, int direction) 
                     */
-                    placement(bestX1, rotation, 0, next);
+                    placement(bestX1, rotation, 0, &next);
 
                 } else {
                     // actually place the piece using bestHeight2
@@ -199,14 +299,14 @@ void decidePlacementTask(void) {
                         SlidePiece(int ID, int direction)
                         RotatePiece(int ID, int direction) 
                     */ 
-                    placement(bestX2, rotation, 0, next);
+                    placement(bestX2, rotation, 0, &next);
 
                 } 
             }
         }
 
-    // *****************************************************************************
-    // *****************************************************************************
+    // // *****************************************************************************
+    // // *****************************************************************************
 
         else {   
                             // 1 for straight piece
@@ -220,7 +320,9 @@ void decidePlacementTask(void) {
             bestHeight = 100;
 
             // rotation 0
-            for (col = 0; col < FIELD_WIDTH - 2; col++) {
+            printString("\n");
+            for (col = 0; col < FIELD_WIDTH - 1; col++) {
+                printInt(columns[col]);
                 if (columns[col] == columns[col + 1] && columns[col] == columns[col + 2]) {
                     if (columns[col] < bestHeight) {
                         bestX = col;
@@ -228,6 +330,7 @@ void decidePlacementTask(void) {
                     }
                 }
             }
+            printString("\n");
             if (bestX != -1) {
                 rotation = 0;
                 bestX++;        // center is in the middle of the piece
@@ -244,12 +347,12 @@ void decidePlacementTask(void) {
                 SlidePiece(int ID, int direction)
                 RotatePiece(int ID, int direction) 
             */
-            placement(bestX, rotation, 1, next);
+            placement(bestX, rotation, 1, &next);
         }
-    }
+    // }
 }
 
-void slide(int targetCol, unsigned next) {
+void slide(int targetCol, unsigned* next) {
     int vectorMovement;
     int isLeft;
     isLeft = 0;
@@ -264,43 +367,97 @@ void slide(int targetCol, unsigned next) {
         // add to queue
         if (isLeft) {
             // move left 
-            myPost(&SlidePiece, MyNewPieceID, LEFT, &next);
+            // printString("\nSliding ");
+            // printInt(MyNewPieceID);
+            // printString(" left\n");
+            myPost(&SlidePiece, MyNewPieceID, LEFT, next);
         } else {
             // move right
-            myPost(&SlidePiece, MyNewPieceID, RIGHT, &next);
+            // printString("\nSliding ");
+            // printInt(MyNewPieceID);
+            // printString(" right\n");
+            myPost(&SlidePiece, MyNewPieceID, RIGHT, next);
         }
         vectorMovement--;
     }
 }
 
-void rotate(int targetOrientation, unsigned next) {
+void rotate(int targetOrientation, unsigned* next) {
+    // if(MyNewPieceType == 1){
+    //     if(targetOrientation != MyNewPieceOrientation){
+    //         // Rotate
+    //         myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
+    //     }
+    // }else{
+    //     if(targetOrientation == MyNewPieceOrientation){
+    //         return;
+    //     }else if (targetOrientation == 0){
+    //         switch(MyNewPieceOrientation){
+    //             case 1:
+    //                 myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
+    //                 break;
+    //             case 2:
+    //                 myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
+    //                 myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
+    //                 break;
+    //             case 3:
+    //                 myPost(&RotatePiece, MyNewPieceID, COUNTER_CLOCKWISE, next);
+    //                 break;
+    //         }
+    //     }else if(targetOrientation == 2){
+    //         switch(MyNewPieceOrientation){
+    //             case 0:
+    //                 myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
+    //                 myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
+    //                 break;
+    //             case 1:
+    //                 myPost(&RotatePiece, MyNewPieceID, COUNTER_CLOCKWISE, next);
+    //                 break;
+    //             case 3:
+    //                 myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
+    //                 break;
+    //         }
+    //     }
+    // }
     int vectorRotation;
     int isClockwise;
-    isClockwise = 1;
+    isClockwise = 0;
     vectorRotation = targetOrientation - MyNewPieceOrientation;
 
     if (vectorRotation < 0) {   //rotate CLOCKWISE
         if (vectorRotation == -3) {
             // rotate CLOCKWISE 1
-            myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, &next);
+            // printString("\nRotating ");
+            // printInt(MyNewPieceID);
+            // printString(" clockwise\n");
+            myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
             return;
         }
         vectorRotation = -vectorRotation;
-        isClockwise = 0;
+        isClockwise = 1;
     }
     if (vectorRotation == 3) {
         // rotate COUNTER_CLOCKWISE 1
-        myPost(&RotatePiece, MyNewPieceID, COUNTER_CLOCKWISE, &next);
+        // printString("\nRotating ");
+        // printInt(MyNewPieceID);
+        // printString(" counterclockwise\n");
+        myPost(&RotatePiece, MyNewPieceID, COUNTER_CLOCKWISE, next);
         return;
     }
     while (vectorRotation > 0) {
         // add to queue
         if (isClockwise) {
             // rotate CLOCKWISE
-            myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, &next);
+            // printString("\nRotating ");
+            // printInt(MyNewPieceID);
+            // printString(" clockwise\n");
+            myPost(&RotatePiece, MyNewPieceID, CLOCKWISE, next);
         } else {
             // rotate COUNTER_CLOCKWISE
-            myPost(&RotatePiece, MyNewPieceID, COUNTER_CLOCKWISE, &next);
+            // printString("\nRotating ");
+            // printInt(MyNewPieceID);
+            // printString(" counterclockwise\n");
+            myPost(&RotatePiece, MyNewPieceID, COUNTER_CLOCKWISE, next);
         }
         vectorRotation--;
     }
@@ -363,22 +520,33 @@ void myPost(void (*func)(int, int), int id, int direction, unsigned* next) {
     MsgArray[*next].func = func;
     MsgArray[*next].id = id;
     MsgArray[*next].direction = direction;
+    // printString("\nNext Index: ");
+    // printInt(*next);
+    // printString("\n");
     YKQPost(commandQPtr, (void*)&(MsgArray[*next]));
+    //*next = (*next +1) % MSGARRAYSIZE;
     *next = (*next +1) % MSGARRAYSIZE;
 }
 
 void communicateTask() {
     msg* cmd;
+    char* dir;
+    char* fn;
     while(1) {
         YKSemPend(communicateSem);
         cmd = (msg*)YKQPend(commandQPtr);
-        printString("\nRotatePiece: ");
-        printInt(RotatePiece);
-        printString("\nSlide: ");
-        printInt(SlidePiece);
-        printString("\nFunction: ");
-        printInt(cmd->func);
-        cmd->func (cmd->id, cmd->direction);
+        // fn = cmd->func == SlidePiece ?  "\nC: Sliding piece " : "\nC: Rotating piece ";
+        // printString(fn);
+        // printInt(cmd->id);
+        // if(fn == "\nRotating piece "){
+        //     dir = cmd->direction == 1 ? " clockwise\n" : " counterclockwise\n";
+        // } else{
+        //     dir = cmd->direction == 1 ? " right\n" : " left\n";
+        // }
+        // printString(dir);
+        // printString("  ");
+        // printInt((int)cmd);
+        (cmd->func)(cmd->id, cmd->direction);
     }
 }
 

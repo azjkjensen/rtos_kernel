@@ -301,7 +301,6 @@ int YKQPost(YKQ* q, void* msg){
         YKExitMutex();
         return NULL;
     }
-
     *(q->nextEmpty) = msg;
     q->nextEmpty++;
     // printString("NextEmpty: ")

@@ -171,6 +171,13 @@ clear:
     push es
     push ds
 
+    call YKEnterISR
+    sti
+    call lineClearedHandler
+    cli 
+    call signalEOI
+    call YKExitISR
+    
     pop ds
     pop es
     pop bp

@@ -7,6 +7,8 @@ extern YKQ* MsgQPtr;
 extern int YKTickNum;
 extern YKSem* communicateSem;
 extern YKSem* newPieceSem;
+extern unsigned straightCounter;
+extern unsigned cornerCounter;
 // extern int GlobalFlag;
 
 // extern struct msg MsgArray[];
@@ -25,6 +27,11 @@ void recievedCommandHandler() {
 
 void newPieceHandler() {
     YKSemPost(newPieceSem);
+}
+
+void lineClearedHandler(){
+    straightCounter--;
+    cornerCounter--;
 }
 
 void tickHandler(){
